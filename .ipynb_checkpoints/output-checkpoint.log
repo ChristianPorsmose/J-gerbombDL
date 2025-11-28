@@ -1,0 +1,384 @@
+nohup: ignoring input
+WARNING ⚠️ no model scale passed. Assuming scale='n'.
+Transferred 448/499 items from pretrained weights
+Epoch 0, Batch 0, Box: 2.5260, Cls: 3.5480, DFL: 2.4730, Total: 8.5470
+Epoch 0, Batch 10, Box: 2.0390, Cls: 2.3730, DFL: 1.9340, Total: 6.3460
+VALIDATION — Epoch 0: Box: 1.1305, Cls: 2.9255, DFL: 1.2515, Total: 5.3075
+Model saved at epoch 0 → weights.pt
+Epoch 1, Batch 0, Box: 2.2730, Cls: 2.4540, DFL: 2.0740, Total: 6.8010
+Epoch 1, Batch 10, Box: 2.2900, Cls: 1.9580, DFL: 1.9700, Total: 6.2180
+VALIDATION — Epoch 1: Box: 0.9935, Cls: 2.9135, DFL: 1.2270, Total: 5.1340
+Model saved at epoch 1 → weights.pt
+Epoch 2, Batch 0, Box: 1.4550, Cls: 1.3700, DFL: 1.5620, Total: 4.3870
+Epoch 2, Batch 10, Box: 0.7010, Cls: 0.7050, DFL: 1.2100, Total: 2.6160
+VALIDATION — Epoch 2: Box: 0.9410, Cls: 2.5720, DFL: 1.2165, Total: 4.7295
+Model saved at epoch 2 → weights.pt
+Epoch 3, Batch 0, Box: 1.8680, Cls: 1.8810, DFL: 1.7880, Total: 5.5370
+Epoch 3, Batch 10, Box: 0.8350, Cls: 0.7980, DFL: 1.3330, Total: 2.9660
+VALIDATION — Epoch 3: Box: 0.8260, Cls: 2.3135, DFL: 1.2005, Total: 4.3400
+Model saved at epoch 3 → weights.pt
+Epoch 4, Batch 0, Box: 1.5670, Cls: 1.3230, DFL: 1.6660, Total: 4.5560
+Epoch 4, Batch 10, Box: 0.8340, Cls: 0.8090, DFL: 1.3360, Total: 2.9790
+VALIDATION — Epoch 4: Box: 0.8580, Cls: 2.0555, DFL: 1.2045, Total: 4.1180
+Model saved at epoch 4 → weights.pt
+Epoch 5, Batch 0, Box: 1.0790, Cls: 0.9370, DFL: 1.4240, Total: 3.4400
+Epoch 5, Batch 10, Box: 1.0730, Cls: 0.8470, DFL: 1.3960, Total: 3.3160
+VALIDATION — Epoch 5: Box: 0.7325, Cls: 2.0125, DFL: 1.1890, Total: 3.9340
+Model saved at epoch 5 → weights.pt
+Epoch 6, Batch 0, Box: 1.5340, Cls: 1.2250, DFL: 1.6380, Total: 4.3970
+Epoch 6, Batch 10, Box: 0.7840, Cls: 0.6720, DFL: 1.3240, Total: 2.7800
+VALIDATION — Epoch 6: Box: 0.7205, Cls: 1.6510, DFL: 1.1900, Total: 3.5615
+Model saved at epoch 6 → weights.pt
+Epoch 7, Batch 0, Box: 1.3960, Cls: 1.1880, DFL: 1.5440, Total: 4.1280
+Epoch 7, Batch 10, Box: 0.6460, Cls: 0.5700, DFL: 1.2390, Total: 2.4550
+VALIDATION — Epoch 7: Box: 0.5970, Cls: 1.5465, DFL: 1.1800, Total: 3.3235
+Model saved at epoch 7 → weights.pt
+Epoch 8, Batch 0, Box: 0.8100, Cls: 0.7160, DFL: 1.3020, Total: 2.8280
+Epoch 8, Batch 10, Box: 0.9810, Cls: 0.7830, DFL: 1.3410, Total: 3.1050
+VALIDATION — Epoch 8: Box: 0.5605, Cls: 1.1330, DFL: 1.1760, Total: 2.8695
+Model saved at epoch 8 → weights.pt
+Epoch 9, Batch 0, Box: 0.9590, Cls: 0.8310, DFL: 1.3910, Total: 3.1810
+Epoch 9, Batch 10, Box: 0.8880, Cls: 0.7220, DFL: 1.3190, Total: 2.9290
+VALIDATION — Epoch 9: Box: 0.5960, Cls: 1.1730, DFL: 1.1805, Total: 2.9495
+Epoch 10, Batch 0, Box: 0.9150, Cls: 0.7500, DFL: 1.3490, Total: 3.0140
+Epoch 10, Batch 10, Box: 2.3220, Cls: 1.9380, DFL: 1.9990, Total: 6.2590
+VALIDATION — Epoch 10: Box: 0.6140, Cls: 0.8380, DFL: 1.1825, Total: 2.6345
+Model saved at epoch 10 → weights.pt
+Epoch 11, Batch 0, Box: 1.0590, Cls: 0.7810, DFL: 1.3930, Total: 3.2330
+Epoch 11, Batch 10, Box: 0.7490, Cls: 0.6300, DFL: 1.3100, Total: 2.6890
+VALIDATION — Epoch 11: Box: 0.5915, Cls: 0.6920, DFL: 1.1875, Total: 2.4710
+Model saved at epoch 11 → weights.pt
+Epoch 12, Batch 0, Box: 0.9770, Cls: 0.7580, DFL: 1.3860, Total: 3.1210
+Epoch 12, Batch 10, Box: 0.7200, Cls: 0.5740, DFL: 1.2690, Total: 2.5630
+VALIDATION — Epoch 12: Box: 0.5605, Cls: 0.5520, DFL: 1.1825, Total: 2.2950
+Model saved at epoch 12 → weights.pt
+Epoch 13, Batch 0, Box: 1.0750, Cls: 0.9070, DFL: 1.4430, Total: 3.4250
+Epoch 13, Batch 10, Box: 0.7590, Cls: 0.6060, DFL: 1.2400, Total: 2.6050
+VALIDATION — Epoch 13: Box: 0.6160, Cls: 0.4815, DFL: 1.1975, Total: 2.2950
+Epoch 14, Batch 0, Box: 1.2210, Cls: 0.9120, DFL: 1.4850, Total: 3.6180
+Epoch 14, Batch 10, Box: 1.0530, Cls: 0.7830, DFL: 1.3810, Total: 3.2170
+VALIDATION — Epoch 14: Box: 0.6095, Cls: 0.4530, DFL: 1.1905, Total: 2.2530
+Model saved at epoch 14 → weights.pt
+Epoch 15, Batch 0, Box: 0.8770, Cls: 0.6170, DFL: 1.3310, Total: 2.8250
+Epoch 15, Batch 10, Box: 1.0450, Cls: 0.8390, DFL: 1.3560, Total: 3.2400
+VALIDATION — Epoch 15: Box: 0.5695, Cls: 0.4435, DFL: 1.1860, Total: 2.1990
+Model saved at epoch 15 → weights.pt
+Epoch 16, Batch 0, Box: 1.0530, Cls: 0.7990, DFL: 1.4290, Total: 3.2810
+Epoch 16, Batch 10, Box: 1.0020, Cls: 0.7570, DFL: 1.3900, Total: 3.1490
+VALIDATION — Epoch 16: Box: 0.6185, Cls: 0.4420, DFL: 1.1880, Total: 2.2485
+Epoch 17, Batch 0, Box: 0.8790, Cls: 0.5900, DFL: 1.3290, Total: 2.7980
+Epoch 17, Batch 10, Box: 0.8620, Cls: 0.9340, DFL: 1.3610, Total: 3.1570
+VALIDATION — Epoch 17: Box: 0.5740, Cls: 0.4110, DFL: 1.1870, Total: 2.1720
+Model saved at epoch 17 → weights.pt
+Epoch 18, Batch 0, Box: 0.8170, Cls: 0.6010, DFL: 1.3120, Total: 2.7300
+Epoch 18, Batch 10, Box: 0.9680, Cls: 0.7630, DFL: 1.2900, Total: 3.0210
+VALIDATION — Epoch 18: Box: 0.6550, Cls: 0.4155, DFL: 1.2080, Total: 2.2785
+Epoch 19, Batch 0, Box: 0.7720, Cls: 0.5250, DFL: 1.3000, Total: 2.5970
+Epoch 19, Batch 10, Box: 0.5360, Cls: 0.3850, DFL: 1.1680, Total: 2.0890
+VALIDATION — Epoch 19: Box: 0.5745, Cls: 0.4030, DFL: 1.1865, Total: 2.1640
+Model saved at epoch 19 → weights.pt
+Epoch 20, Batch 0, Box: 0.7550, Cls: 0.5460, DFL: 1.2980, Total: 2.5990
+Epoch 20, Batch 10, Box: 1.3980, Cls: 1.1580, DFL: 1.6080, Total: 4.1640
+VALIDATION — Epoch 20: Box: 0.5880, Cls: 0.4020, DFL: 1.1915, Total: 2.1815
+Epoch 21, Batch 0, Box: 0.9990, Cls: 0.7180, DFL: 1.4200, Total: 3.1370
+Epoch 21, Batch 10, Box: 1.1380, Cls: 0.8740, DFL: 1.4540, Total: 3.4660
+VALIDATION — Epoch 21: Box: 0.5620, Cls: 0.3910, DFL: 1.1845, Total: 2.1375
+Model saved at epoch 21 → weights.pt
+Epoch 22, Batch 0, Box: 0.7850, Cls: 0.5580, DFL: 1.3050, Total: 2.6480
+Epoch 22, Batch 10, Box: 0.9300, Cls: 0.7120, DFL: 1.3920, Total: 3.0340
+VALIDATION — Epoch 22: Box: 0.5135, Cls: 0.3500, DFL: 1.1830, Total: 2.0465
+Model saved at epoch 22 → weights.pt
+Epoch 23, Batch 0, Box: 0.7100, Cls: 0.5220, DFL: 1.2970, Total: 2.5290
+Epoch 23, Batch 10, Box: 0.7600, Cls: 0.6730, DFL: 1.3000, Total: 2.7330
+VALIDATION — Epoch 23: Box: 0.5440, Cls: 0.4300, DFL: 1.1890, Total: 2.1630
+Epoch 24, Batch 0, Box: 0.5510, Cls: 0.4280, DFL: 1.2370, Total: 2.2160
+Epoch 24, Batch 10, Box: 1.2670, Cls: 0.8190, DFL: 1.6190, Total: 3.7050
+VALIDATION — Epoch 24: Box: 0.5195, Cls: 0.3610, DFL: 1.1830, Total: 2.0635
+Epoch 25, Batch 0, Box: 0.8650, Cls: 0.5740, DFL: 1.3520, Total: 2.7910
+Epoch 25, Batch 10, Box: 0.6930, Cls: 0.5230, DFL: 1.2570, Total: 2.4730
+VALIDATION — Epoch 25: Box: 0.5160, Cls: 0.3380, DFL: 1.1850, Total: 2.0390
+Model saved at epoch 25 → weights.pt
+Epoch 26, Batch 0, Box: 0.5800, Cls: 0.4250, DFL: 1.2370, Total: 2.2420
+Epoch 26, Batch 10, Box: 0.7460, Cls: 0.4970, DFL: 1.3810, Total: 2.6240
+VALIDATION — Epoch 26: Box: 0.5200, Cls: 0.3375, DFL: 1.1850, Total: 2.0425
+Epoch 27, Batch 0, Box: 0.7710, Cls: 0.5350, DFL: 1.2920, Total: 2.5980
+Epoch 27, Batch 10, Box: 0.8850, Cls: 0.6200, DFL: 1.3520, Total: 2.8570
+VALIDATION — Epoch 27: Box: 0.5390, Cls: 0.3360, DFL: 1.1850, Total: 2.0600
+Epoch 28, Batch 0, Box: 0.6360, Cls: 0.4700, DFL: 1.2490, Total: 2.3550
+Epoch 28, Batch 10, Box: 0.9600, Cls: 0.7030, DFL: 1.3800, Total: 3.0430
+VALIDATION — Epoch 28: Box: 0.5045, Cls: 0.3540, DFL: 1.1815, Total: 2.0400
+Epoch 29, Batch 0, Box: 0.7390, Cls: 0.5260, DFL: 1.2570, Total: 2.5220
+Epoch 29, Batch 10, Box: 0.6100, Cls: 0.4230, DFL: 1.2520, Total: 2.2850
+VALIDATION — Epoch 29: Box: 0.5175, Cls: 0.3300, DFL: 1.1835, Total: 2.0310
+Model saved at epoch 29 → weights.pt
+Epoch 30, Batch 0, Box: 0.6730, Cls: 0.4810, DFL: 1.2890, Total: 2.4430
+Epoch 30, Batch 10, Box: 0.8190, Cls: 0.7450, DFL: 1.3650, Total: 2.9290
+VALIDATION — Epoch 30: Box: 0.5065, Cls: 0.3160, DFL: 1.1790, Total: 2.0015
+Model saved at epoch 30 → weights.pt
+Epoch 31, Batch 0, Box: 0.6910, Cls: 0.4180, DFL: 1.2700, Total: 2.3790
+Epoch 31, Batch 10, Box: 1.2230, Cls: 0.8920, DFL: 1.4970, Total: 3.6120
+VALIDATION — Epoch 31: Box: 0.5605, Cls: 0.3260, DFL: 1.1890, Total: 2.0755
+Epoch 32, Batch 0, Box: 0.8900, Cls: 0.6040, DFL: 1.3420, Total: 2.8360
+Epoch 32, Batch 10, Box: 0.7010, Cls: 0.4520, DFL: 1.3090, Total: 2.4620
+VALIDATION — Epoch 32: Box: 0.5295, Cls: 0.3105, DFL: 1.1840, Total: 2.0240
+Epoch 33, Batch 0, Box: 0.6550, Cls: 0.4100, DFL: 1.2700, Total: 2.3350
+Epoch 33, Batch 10, Box: 0.5340, Cls: 0.3510, DFL: 1.2360, Total: 2.1210
+VALIDATION — Epoch 33: Box: 0.5315, Cls: 0.3325, DFL: 1.1865, Total: 2.0505
+Epoch 34, Batch 0, Box: 0.8220, Cls: 0.5480, DFL: 1.3080, Total: 2.6780
+Epoch 34, Batch 10, Box: 1.0200, Cls: 0.5410, DFL: 1.4180, Total: 2.9790
+VALIDATION — Epoch 34: Box: 0.5900, Cls: 0.3375, DFL: 1.1880, Total: 2.1155
+Epoch 35, Batch 0, Box: 0.8340, Cls: 0.5050, DFL: 1.3060, Total: 2.6450
+Epoch 35, Batch 10, Box: 0.5780, Cls: 0.4040, DFL: 1.2330, Total: 2.2150
+VALIDATION — Epoch 35: Box: 0.5265, Cls: 0.3120, DFL: 1.1850, Total: 2.0235
+Epoch 36, Batch 0, Box: 0.6830, Cls: 0.4020, DFL: 1.2650, Total: 2.3500
+Epoch 36, Batch 10, Box: 0.7960, Cls: 0.6050, DFL: 1.3160, Total: 2.7170
+VALIDATION — Epoch 36: Box: 0.5135, Cls: 0.3020, DFL: 1.1825, Total: 1.9980
+Model saved at epoch 36 → weights.pt
+Epoch 37, Batch 0, Box: 0.5460, Cls: 0.3460, DFL: 1.2170, Total: 2.1090
+Epoch 37, Batch 10, Box: 0.8990, Cls: 0.6050, DFL: 1.2720, Total: 2.7760
+VALIDATION — Epoch 37: Box: 0.5140, Cls: 0.2950, DFL: 1.1820, Total: 1.9910
+Model saved at epoch 37 → weights.pt
+Epoch 38, Batch 0, Box: 0.6110, Cls: 0.3930, DFL: 1.2280, Total: 2.2320
+Epoch 38, Batch 10, Box: 0.9010, Cls: 0.5840, DFL: 1.3360, Total: 2.8210
+VALIDATION — Epoch 38: Box: 0.5370, Cls: 0.3040, DFL: 1.1840, Total: 2.0250
+Epoch 39, Batch 0, Box: 0.6150, Cls: 0.3910, DFL: 1.2370, Total: 2.2430
+Epoch 39, Batch 10, Box: 0.4020, Cls: 0.2560, DFL: 1.1300, Total: 1.7880
+VALIDATION — Epoch 39: Box: 0.4930, Cls: 0.2895, DFL: 1.1780, Total: 1.9605
+Model saved at epoch 39 → weights.pt
+Epoch 40, Batch 0, Box: 0.5290, Cls: 0.3450, DFL: 1.2070, Total: 2.0810
+Epoch 40, Batch 10, Box: 0.5240, Cls: 0.3950, DFL: 1.2000, Total: 2.1190
+VALIDATION — Epoch 40: Box: 0.5300, Cls: 0.2960, DFL: 1.1835, Total: 2.0095
+Epoch 41, Batch 0, Box: 0.5350, Cls: 0.3590, DFL: 1.2020, Total: 2.0960
+Epoch 41, Batch 10, Box: 0.7440, Cls: 0.4260, DFL: 1.2810, Total: 2.4510
+VALIDATION — Epoch 41: Box: 0.4950, Cls: 0.2860, DFL: 1.1795, Total: 1.9605
+Epoch 42, Batch 0, Box: 0.7330, Cls: 0.4020, DFL: 1.2910, Total: 2.4260
+Epoch 42, Batch 10, Box: 0.3780, Cls: 0.2510, DFL: 1.1430, Total: 1.7720
+VALIDATION — Epoch 42: Box: 0.5160, Cls: 0.2825, DFL: 1.1840, Total: 1.9825
+Epoch 43, Batch 0, Box: 0.5680, Cls: 0.3080, DFL: 1.2310, Total: 2.1070
+Epoch 43, Batch 10, Box: 0.8010, Cls: 0.4270, DFL: 1.3770, Total: 2.6050
+VALIDATION — Epoch 43: Box: 0.5160, Cls: 0.2895, DFL: 1.1825, Total: 1.9880
+Epoch 44, Batch 0, Box: 0.6680, Cls: 0.4200, DFL: 1.2450, Total: 2.3330
+Epoch 44, Batch 10, Box: 0.7400, Cls: 0.4380, DFL: 1.2930, Total: 2.4710
+VALIDATION — Epoch 44: Box: 0.5385, Cls: 0.2875, DFL: 1.1860, Total: 2.0120
+Epoch 45, Batch 0, Box: 0.6020, Cls: 0.3090, DFL: 1.2190, Total: 2.1300
+Epoch 45, Batch 10, Box: 0.7240, Cls: 0.3950, DFL: 1.2610, Total: 2.3800
+VALIDATION — Epoch 45: Box: 0.5360, Cls: 0.2835, DFL: 1.1820, Total: 2.0015
+Epoch 46, Batch 0, Box: 0.6810, Cls: 0.3520, DFL: 1.2670, Total: 2.3000
+Epoch 46, Batch 10, Box: 0.6900, Cls: 0.4310, DFL: 1.3000, Total: 2.4210
+VALIDATION — Epoch 46: Box: 0.5320, Cls: 0.2865, DFL: 1.1840, Total: 2.0025
+Epoch 47, Batch 0, Box: 0.6040, Cls: 0.3480, DFL: 1.2400, Total: 2.1920
+Epoch 47, Batch 10, Box: 0.6400, Cls: 0.3400, DFL: 1.2380, Total: 2.2180
+VALIDATION — Epoch 47: Box: 0.5100, Cls: 0.2690, DFL: 1.1805, Total: 1.9595
+Model saved at epoch 47 → weights.pt
+Epoch 48, Batch 0, Box: 0.5720, Cls: 0.3120, DFL: 1.2300, Total: 2.1140
+Epoch 48, Batch 10, Box: 0.7070, Cls: 0.4050, DFL: 1.2500, Total: 2.3620
+VALIDATION — Epoch 48: Box: 0.5290, Cls: 0.2845, DFL: 1.1840, Total: 1.9975
+Epoch 49, Batch 0, Box: 0.5020, Cls: 0.2720, DFL: 1.2000, Total: 1.9740
+Epoch 49, Batch 10, Box: 0.3830, Cls: 0.3400, DFL: 1.1840, Total: 1.9070
+VALIDATION — Epoch 49: Box: 0.5300, Cls: 0.2785, DFL: 1.1810, Total: 1.9895
+Epoch 50, Batch 0, Box: 0.4890, Cls: 0.2680, DFL: 1.1720, Total: 1.9290
+Epoch 50, Batch 10, Box: 0.5010, Cls: 0.3750, DFL: 1.2380, Total: 2.1140
+VALIDATION — Epoch 50: Box: 0.5005, Cls: 0.2705, DFL: 1.1830, Total: 1.9540
+Model saved at epoch 50 → weights.pt
+Epoch 51, Batch 0, Box: 0.5610, Cls: 0.2910, DFL: 1.2190, Total: 2.0710
+Epoch 51, Batch 10, Box: 0.7100, Cls: 0.4070, DFL: 1.2780, Total: 2.3950
+VALIDATION — Epoch 51: Box: 0.5510, Cls: 0.2735, DFL: 1.1855, Total: 2.0100
+Epoch 52, Batch 0, Box: 0.5900, Cls: 0.3030, DFL: 1.2180, Total: 2.1110
+Epoch 52, Batch 10, Box: 0.5080, Cls: 0.2860, DFL: 1.2180, Total: 2.0120
+VALIDATION — Epoch 52: Box: 0.5015, Cls: 0.2640, DFL: 1.1835, Total: 1.9490
+Model saved at epoch 52 → weights.pt
+Epoch 53, Batch 0, Box: 0.6070, Cls: 0.3060, DFL: 1.2270, Total: 2.1400
+Epoch 53, Batch 10, Box: 0.4650, Cls: 0.2240, DFL: 1.2130, Total: 1.9020
+VALIDATION — Epoch 53: Box: 0.5190, Cls: 0.2605, DFL: 1.1835, Total: 1.9630
+Epoch 54, Batch 0, Box: 0.5070, Cls: 0.2900, DFL: 1.2230, Total: 2.0200
+Epoch 54, Batch 10, Box: 0.5310, Cls: 0.2960, DFL: 1.2240, Total: 2.0510
+VALIDATION — Epoch 54: Box: 0.4955, Cls: 0.2700, DFL: 1.1815, Total: 1.9470
+Model saved at epoch 54 → weights.pt
+Epoch 55, Batch 0, Box: 0.4420, Cls: 0.2570, DFL: 1.1840, Total: 1.8830
+Epoch 55, Batch 10, Box: 0.6870, Cls: 0.3930, DFL: 1.2480, Total: 2.3280
+VALIDATION — Epoch 55: Box: 0.4965, Cls: 0.2590, DFL: 1.1805, Total: 1.9360
+Model saved at epoch 55 → weights.pt
+Epoch 56, Batch 0, Box: 0.4540, Cls: 0.2630, DFL: 1.2100, Total: 1.9270
+Epoch 56, Batch 10, Box: 0.5070, Cls: 0.3390, DFL: 1.2520, Total: 2.0980
+VALIDATION — Epoch 56: Box: 0.5095, Cls: 0.2545, DFL: 1.1825, Total: 1.9465
+Epoch 57, Batch 0, Box: 0.3950, Cls: 0.2280, DFL: 1.1800, Total: 1.8030
+Epoch 57, Batch 10, Box: 0.5420, Cls: 0.2790, DFL: 1.2830, Total: 2.1040
+VALIDATION — Epoch 57: Box: 0.4930, Cls: 0.2495, DFL: 1.1800, Total: 1.9225
+Model saved at epoch 57 → weights.pt
+Epoch 58, Batch 0, Box: 0.4880, Cls: 0.2460, DFL: 1.2060, Total: 1.9400
+Epoch 58, Batch 10, Box: 0.4760, Cls: 0.2500, DFL: 1.1990, Total: 1.9250
+VALIDATION — Epoch 58: Box: 0.4910, Cls: 0.2480, DFL: 1.1805, Total: 1.9195
+Model saved at epoch 58 → weights.pt
+Epoch 59, Batch 0, Box: 0.5300, Cls: 0.2770, DFL: 1.2190, Total: 2.0260
+Epoch 59, Batch 10, Box: 0.3870, Cls: 0.2340, DFL: 1.2090, Total: 1.8300
+VALIDATION — Epoch 59: Box: 0.5035, Cls: 0.2535, DFL: 1.1845, Total: 1.9415
+Epoch 60, Batch 0, Box: 0.4270, Cls: 0.2290, DFL: 1.1970, Total: 1.8530
+Epoch 60, Batch 10, Box: 0.4430, Cls: 0.2380, DFL: 1.2190, Total: 1.9000
+VALIDATION — Epoch 60: Box: 0.5040, Cls: 0.2445, DFL: 1.1835, Total: 1.9320
+Epoch 61, Batch 0, Box: 0.5220, Cls: 0.2620, DFL: 1.2070, Total: 1.9910
+Epoch 61, Batch 10, Box: 0.5340, Cls: 0.2630, DFL: 1.2340, Total: 2.0310
+VALIDATION — Epoch 61: Box: 0.5165, Cls: 0.2495, DFL: 1.1810, Total: 1.9470
+Epoch 62, Batch 0, Box: 0.4470, Cls: 0.2290, DFL: 1.1850, Total: 1.8610
+Epoch 62, Batch 10, Box: 0.4770, Cls: 0.2700, DFL: 1.2560, Total: 2.0030
+VALIDATION — Epoch 62: Box: 0.4985, Cls: 0.2455, DFL: 1.1815, Total: 1.9255
+Epoch 63, Batch 0, Box: 0.4640, Cls: 0.2380, DFL: 1.2020, Total: 1.9040
+Epoch 63, Batch 10, Box: 0.4560, Cls: 0.2340, DFL: 1.2310, Total: 1.9210
+VALIDATION — Epoch 63: Box: 0.5020, Cls: 0.2455, DFL: 1.1835, Total: 1.9310
+Epoch 64, Batch 0, Box: 0.4250, Cls: 0.2400, DFL: 1.1980, Total: 1.8630
+Epoch 64, Batch 10, Box: 0.4920, Cls: 0.2750, DFL: 1.2460, Total: 2.0130
+VALIDATION — Epoch 64: Box: 0.4810, Cls: 0.2410, DFL: 1.1805, Total: 1.9025
+Model saved at epoch 64 → weights.pt
+Epoch 65, Batch 0, Box: 0.4970, Cls: 0.2630, DFL: 1.2000, Total: 1.9600
+Epoch 65, Batch 10, Box: 0.5730, Cls: 0.2910, DFL: 1.1670, Total: 2.0310
+VALIDATION — Epoch 65: Box: 0.4915, Cls: 0.2530, DFL: 1.1810, Total: 1.9255
+Epoch 66, Batch 0, Box: 0.4860, Cls: 0.2550, DFL: 1.2120, Total: 1.9530
+Epoch 66, Batch 10, Box: 0.4370, Cls: 0.2300, DFL: 1.1520, Total: 1.8190
+VALIDATION — Epoch 66: Box: 0.5085, Cls: 0.2410, DFL: 1.1820, Total: 1.9315
+Epoch 67, Batch 0, Box: 0.3850, Cls: 0.2120, DFL: 1.1930, Total: 1.7900
+Epoch 67, Batch 10, Box: 0.3570, Cls: 0.1890, DFL: 1.1470, Total: 1.6930
+VALIDATION — Epoch 67: Box: 0.5145, Cls: 0.2450, DFL: 1.1825, Total: 1.9420
+Epoch 68, Batch 0, Box: 0.4600, Cls: 0.2370, DFL: 1.1980, Total: 1.8950
+Epoch 68, Batch 10, Box: 0.3520, Cls: 0.1920, DFL: 1.2170, Total: 1.7610
+VALIDATION — Epoch 68: Box: 0.5070, Cls: 0.2390, DFL: 1.1835, Total: 1.9295
+Epoch 69, Batch 0, Box: 0.4180, Cls: 0.2150, DFL: 1.1790, Total: 1.8120
+Epoch 69, Batch 10, Box: 0.5800, Cls: 0.2640, DFL: 1.2170, Total: 2.0610
+VALIDATION — Epoch 69: Box: 0.5580, Cls: 0.2515, DFL: 1.1910, Total: 2.0005
+Epoch 70, Batch 0, Box: 0.4990, Cls: 0.2480, DFL: 1.2050, Total: 1.9520
+Epoch 70, Batch 10, Box: 0.6890, Cls: 0.3790, DFL: 1.2490, Total: 2.3170
+VALIDATION — Epoch 70: Box: 0.5335, Cls: 0.2585, DFL: 1.1880, Total: 1.9800
+Epoch 71, Batch 0, Box: 0.4170, Cls: 0.2150, DFL: 1.1990, Total: 1.8310
+Epoch 71, Batch 10, Box: 0.4460, Cls: 0.2230, DFL: 1.2110, Total: 1.8800
+VALIDATION — Epoch 71: Box: 0.5135, Cls: 0.2355, DFL: 1.1835, Total: 1.9325
+Epoch 72, Batch 0, Box: 0.3730, Cls: 0.1980, DFL: 1.1800, Total: 1.7510
+Epoch 72, Batch 10, Box: 0.3390, Cls: 0.1790, DFL: 1.1480, Total: 1.6660
+VALIDATION — Epoch 72: Box: 0.4995, Cls: 0.2285, DFL: 1.1820, Total: 1.9100
+Epoch 73, Batch 0, Box: 0.3820, Cls: 0.2050, DFL: 1.1840, Total: 1.7710
+Epoch 73, Batch 10, Box: 0.4510, Cls: 0.2430, DFL: 1.2330, Total: 1.9270
+VALIDATION — Epoch 73: Box: 0.5515, Cls: 0.2415, DFL: 1.1855, Total: 1.9785
+Epoch 74, Batch 0, Box: 0.4820, Cls: 0.2470, DFL: 1.2140, Total: 1.9430
+Epoch 74, Batch 10, Box: 0.5090, Cls: 0.2640, DFL: 1.1900, Total: 1.9630
+VALIDATION — Epoch 74: Box: 0.4645, Cls: 0.2260, DFL: 1.1770, Total: 1.8675
+Model saved at epoch 74 → weights.pt
+Epoch 75, Batch 0, Box: 0.3990, Cls: 0.2040, DFL: 1.1930, Total: 1.7960
+Epoch 75, Batch 10, Box: 0.3650, Cls: 0.1830, DFL: 1.1940, Total: 1.7420
+VALIDATION — Epoch 75: Box: 0.5085, Cls: 0.2300, DFL: 1.1795, Total: 1.9180
+Epoch 76, Batch 0, Box: 0.4430, Cls: 0.2170, DFL: 1.1920, Total: 1.8520
+Epoch 76, Batch 10, Box: 0.7250, Cls: 0.3010, DFL: 1.3150, Total: 2.3410
+VALIDATION — Epoch 76: Box: 0.5065, Cls: 0.2305, DFL: 1.1815, Total: 1.9185
+Epoch 77, Batch 0, Box: 0.5140, Cls: 0.2650, DFL: 1.2200, Total: 1.9990
+Epoch 77, Batch 10, Box: 0.4680, Cls: 0.2250, DFL: 1.2130, Total: 1.9060
+VALIDATION — Epoch 77: Box: 0.4715, Cls: 0.2320, DFL: 1.1795, Total: 1.8830
+Epoch 78, Batch 0, Box: 0.4100, Cls: 0.2150, DFL: 1.1860, Total: 1.8110
+Epoch 78, Batch 10, Box: 0.5400, Cls: 0.2860, DFL: 1.2290, Total: 2.0550
+VALIDATION — Epoch 78: Box: 0.4940, Cls: 0.2250, DFL: 1.1805, Total: 1.8995
+Epoch 79, Batch 0, Box: 0.3480, Cls: 0.1840, DFL: 1.1630, Total: 1.6950
+Epoch 79, Batch 10, Box: 0.3940, Cls: 0.2100, DFL: 1.2160, Total: 1.8200
+VALIDATION — Epoch 79: Box: 0.4925, Cls: 0.2240, DFL: 1.1805, Total: 1.8970
+Epoch 80, Batch 0, Box: 0.3620, Cls: 0.1970, DFL: 1.1920, Total: 1.7510
+Epoch 80, Batch 10, Box: 0.4030, Cls: 0.1960, DFL: 1.2080, Total: 1.8070
+VALIDATION — Epoch 80: Box: 0.4935, Cls: 0.2255, DFL: 1.1825, Total: 1.9015
+Epoch 81, Batch 0, Box: 0.4500, Cls: 0.2290, DFL: 1.1710, Total: 1.8500
+Epoch 81, Batch 10, Box: 0.3030, Cls: 0.1800, DFL: 1.1260, Total: 1.6090
+VALIDATION — Epoch 81: Box: 0.5095, Cls: 0.2285, DFL: 1.1805, Total: 1.9185
+Epoch 82, Batch 0, Box: 0.3800, Cls: 0.1930, DFL: 1.1800, Total: 1.7530
+Epoch 82, Batch 10, Box: 0.3110, Cls: 0.2110, DFL: 1.1210, Total: 1.6430
+VALIDATION — Epoch 82: Box: 0.5000, Cls: 0.2220, DFL: 1.1825, Total: 1.9045
+Epoch 83, Batch 0, Box: 0.4230, Cls: 0.2190, DFL: 1.1990, Total: 1.8410
+Epoch 83, Batch 10, Box: 0.5870, Cls: 0.3640, DFL: 1.1580, Total: 2.1090
+VALIDATION — Epoch 83: Box: 0.4925, Cls: 0.2245, DFL: 1.1815, Total: 1.8985
+Epoch 84, Batch 0, Box: 0.3750, Cls: 0.1860, DFL: 1.1950, Total: 1.7560
+Epoch 84, Batch 10, Box: 0.4930, Cls: 0.2350, DFL: 1.2350, Total: 1.9630
+VALIDATION — Epoch 84: Box: 0.4685, Cls: 0.2210, DFL: 1.1780, Total: 1.8675
+Model saved at epoch 84 → weights.pt
+Epoch 85, Batch 0, Box: 0.4150, Cls: 0.2170, DFL: 1.1960, Total: 1.8280
+Epoch 85, Batch 10, Box: 0.4400, Cls: 0.2180, DFL: 1.2320, Total: 1.8900
+VALIDATION — Epoch 85: Box: 0.4950, Cls: 0.2245, DFL: 1.1810, Total: 1.9005
+Epoch 86, Batch 0, Box: 0.3190, Cls: 0.1830, DFL: 1.1570, Total: 1.6590
+Epoch 86, Batch 10, Box: 0.4220, Cls: 0.1910, DFL: 1.2350, Total: 1.8480
+VALIDATION — Epoch 86: Box: 0.4830, Cls: 0.2230, DFL: 1.1785, Total: 1.8845
+Epoch 87, Batch 0, Box: 0.3750, Cls: 0.1920, DFL: 1.1720, Total: 1.7390
+Epoch 87, Batch 10, Box: 0.4400, Cls: 0.2070, DFL: 1.2660, Total: 1.9130
+VALIDATION — Epoch 87: Box: 0.4820, Cls: 0.2235, DFL: 1.1805, Total: 1.8860
+Epoch 88, Batch 0, Box: 0.3730, Cls: 0.1830, DFL: 1.1800, Total: 1.7360
+Epoch 88, Batch 10, Box: 0.5010, Cls: 0.2210, DFL: 1.2160, Total: 1.9380
+VALIDATION — Epoch 88: Box: 0.4750, Cls: 0.2150, DFL: 1.1780, Total: 1.8680
+Epoch 89, Batch 0, Box: 0.3550, Cls: 0.1780, DFL: 1.1870, Total: 1.7200
+Epoch 89, Batch 10, Box: 0.4010, Cls: 0.2090, DFL: 1.1910, Total: 1.8010
+VALIDATION — Epoch 89: Box: 0.4840, Cls: 0.2155, DFL: 1.1800, Total: 1.8795
+Epoch 90, Batch 0, Box: 0.3310, Cls: 0.1740, DFL: 1.1600, Total: 1.6650
+Epoch 90, Batch 10, Box: 0.3330, Cls: 0.1720, DFL: 1.1710, Total: 1.6760
+VALIDATION — Epoch 90: Box: 0.4775, Cls: 0.2160, DFL: 1.1785, Total: 1.8720
+Epoch 91, Batch 0, Box: 0.3300, Cls: 0.1720, DFL: 1.1700, Total: 1.6720
+Epoch 91, Batch 10, Box: 0.4390, Cls: 0.2060, DFL: 1.2200, Total: 1.8650
+VALIDATION — Epoch 91: Box: 0.4850, Cls: 0.2180, DFL: 1.1785, Total: 1.8815
+Epoch 92, Batch 0, Box: 0.4100, Cls: 0.1930, DFL: 1.1860, Total: 1.7890
+Epoch 92, Batch 10, Box: 0.3720, Cls: 0.1690, DFL: 1.1510, Total: 1.6920
+VALIDATION — Epoch 92: Box: 0.4880, Cls: 0.2150, DFL: 1.1785, Total: 1.8815
+Epoch 93, Batch 0, Box: 0.4400, Cls: 0.2080, DFL: 1.1970, Total: 1.8450
+Epoch 93, Batch 10, Box: 0.4250, Cls: 0.2070, DFL: 1.2070, Total: 1.8390
+VALIDATION — Epoch 93: Box: 0.4820, Cls: 0.2150, DFL: 1.1765, Total: 1.8735
+Epoch 94, Batch 0, Box: 0.3670, Cls: 0.1880, DFL: 1.1840, Total: 1.7390
+Epoch 94, Batch 10, Box: 0.3510, Cls: 0.1880, DFL: 1.2170, Total: 1.7560
+VALIDATION — Epoch 94: Box: 0.4810, Cls: 0.2115, DFL: 1.1765, Total: 1.8690
+Epoch 95, Batch 0, Box: 0.4620, Cls: 0.2230, DFL: 1.2230, Total: 1.9080
+Epoch 95, Batch 10, Box: 0.4390, Cls: 0.2090, DFL: 1.1840, Total: 1.8320
+VALIDATION — Epoch 95: Box: 0.4970, Cls: 0.2165, DFL: 1.1805, Total: 1.8940
+Epoch 96, Batch 0, Box: 0.3650, Cls: 0.1800, DFL: 1.1890, Total: 1.7340
+Epoch 96, Batch 10, Box: 0.3040, Cls: 0.1550, DFL: 1.1210, Total: 1.5800
+VALIDATION — Epoch 96: Box: 0.5370, Cls: 0.2205, DFL: 1.1890, Total: 1.9465
+Epoch 97, Batch 0, Box: 0.3960, Cls: 0.1840, DFL: 1.1980, Total: 1.7780
+Epoch 97, Batch 10, Box: 0.2410, Cls: 0.1720, DFL: 1.1470, Total: 1.5600
+VALIDATION — Epoch 97: Box: 0.4670, Cls: 0.2040, DFL: 1.1785, Total: 1.8495
+Model saved at epoch 97 → weights.pt
+Epoch 98, Batch 0, Box: 0.2690, Cls: 0.1480, DFL: 1.1620, Total: 1.5790
+Epoch 98, Batch 10, Box: 0.3570, Cls: 0.1790, DFL: 1.1850, Total: 1.7210
+VALIDATION — Epoch 98: Box: 0.4865, Cls: 0.2095, DFL: 1.1790, Total: 1.8750
+Epoch 99, Batch 0, Box: 0.3450, Cls: 0.1820, DFL: 1.1620, Total: 1.6890
+Epoch 99, Batch 10, Box: 0.4350, Cls: 0.1970, DFL: 1.2060, Total: 1.8380
+VALIDATION — Epoch 99: Box: 0.4645, Cls: 0.2015, DFL: 1.1780, Total: 1.8440
+Model saved at epoch 99 → weights.pt
+Epoch 100, Batch 0, Box: 0.2980, Cls: 0.1610, DFL: 1.1620, Total: 1.6210
+Epoch 100, Batch 10, Box: 0.2790, Cls: 0.1710, DFL: 1.1730, Total: 1.6230
+VALIDATION — Epoch 100: Box: 0.4780, Cls: 0.2050, DFL: 1.1765, Total: 1.8595
+Epoch 101, Batch 0, Box: 0.3550, Cls: 0.1880, DFL: 1.1780, Total: 1.7210
+Epoch 101, Batch 10, Box: 0.3030, Cls: 0.1590, DFL: 1.1440, Total: 1.6060
+VALIDATION — Epoch 101: Box: 0.4845, Cls: 0.2065, DFL: 1.1795, Total: 1.8705
+Epoch 102, Batch 0, Box: 0.3490, Cls: 0.1730, DFL: 1.1730, Total: 1.6950
+Epoch 102, Batch 10, Box: 0.3480, Cls: 0.1700, DFL: 1.1560, Total: 1.6740
+VALIDATION — Epoch 102: Box: 0.4940, Cls: 0.2070, DFL: 1.1780, Total: 1.8790
+Epoch 103, Batch 0, Box: 0.3570, Cls: 0.1720, DFL: 1.1480, Total: 1.6770
+Epoch 103, Batch 10, Box: 0.2690, Cls: 0.1400, DFL: 1.1700, Total: 1.5790
+VALIDATION — Epoch 103: Box: 0.4980, Cls: 0.2195, DFL: 1.1800, Total: 1.8975
+Epoch 104, Batch 0, Box: 0.3290, Cls: 0.1650, DFL: 1.1600, Total: 1.6540
+Epoch 104, Batch 10, Box: 0.2910, Cls: 0.1670, DFL: 1.1310, Total: 1.5890
+VALIDATION — Epoch 104: Box: 0.4805, Cls: 0.2100, DFL: 1.1810, Total: 1.8715
+Epoch 105, Batch 0, Box: 0.3030, Cls: 0.1580, DFL: 1.1490, Total: 1.6100
+Epoch 105, Batch 10, Box: 0.3190, Cls: 0.1640, DFL: 1.1740, Total: 1.6570
+VALIDATION — Epoch 105: Box: 0.5000, Cls: 0.2135, DFL: 1.1795, Total: 1.8930
+Epoch 106, Batch 0, Box: 0.3290, Cls: 0.1720, DFL: 1.1820, Total: 1.6830
+Epoch 106, Batch 10, Box: 0.2450, Cls: 0.1450, DFL: 1.1630, Total: 1.5530
+VALIDATION — Epoch 106: Box: 0.4835, Cls: 0.2075, DFL: 1.1795, Total: 1.8705
+Epoch 107, Batch 0, Box: 0.3310, Cls: 0.1660, DFL: 1.1570, Total: 1.6540
+Epoch 107, Batch 10, Box: 0.3730, Cls: 0.1650, DFL: 1.1850, Total: 1.7230
+VALIDATION — Epoch 107: Box: 0.4740, Cls: 0.2045, DFL: 1.1775, Total: 1.8560
+Epoch 108, Batch 0, Box: 0.3320, Cls: 0.1630, DFL: 1.1790, Total: 1.6740
+Epoch 108, Batch 10, Box: 0.3380, Cls: 0.1540, DFL: 1.1660, Total: 1.6580
+VALIDATION — Epoch 108: Box: 0.4925, Cls: 0.2090, DFL: 1.1800, Total: 1.8815
+Epoch 109, Batch 0, Box: 0.3560, Cls: 0.1740, DFL: 1.1560, Total: 1.6860
+Epoch 109, Batch 10, Box: 0.3110, Cls: 0.1560, DFL: 1.1520, Total: 1.6190
+VALIDATION — Epoch 109: Box: 0.4885, Cls: 0.2095, DFL: 1.1805, Total: 1.8785
+Epoch 110, Batch 0, Box: 0.3300, Cls: 0.1640, DFL: 1.1720, Total: 1.6660
+Epoch 110, Batch 10, Box: 0.4010, Cls: 0.1950, DFL: 1.1770, Total: 1.7730
+VALIDATION — Epoch 110: Box: 0.4705, Cls: 0.1990, DFL: 1.1795, Total: 1.8490
+Epoch 111, Batch 0, Box: 0.2820, Cls: 0.1530, DFL: 1.1520, Total: 1.5870
+Epoch 111, Batch 10, Box: 0.3610, Cls: 0.1680, DFL: 1.1170, Total: 1.6460
+VALIDATION — Epoch 111: Box: 0.5145, Cls: 0.2050, DFL: 1.1865, Total: 1.9060
+Epoch 112, Batch 0, Box: 0.3190, Cls: 0.1600, DFL: 1.1740, Total: 1.6530
+Epoch 112, Batch 10, Box: 0.3870, Cls: 0.2220, DFL: 1.1590, Total: 1.7680
+VALIDATION — Epoch 112: Box: 0.4730, Cls: 0.2015, DFL: 1.1785, Total: 1.8530
+Epoch 113, Batch 0, Box: 0.3660, Cls: 0.1740, DFL: 1.1940, Total: 1.7340
+Epoch 113, Batch 10, Box: 0.3310, Cls: 0.1690, DFL: 1.1670, Total: 1.6670
+VALIDATION — Epoch 113: Box: 0.4750, Cls: 0.2100, DFL: 1.1800, Total: 1.8650
+Epoch 114, Batch 0, Box: 0.3500, Cls: 0.1660, DFL: 1.1800, Total: 1.6960
+Epoch 114, Batch 10, Box: 0.2510, Cls: 0.1290, DFL: 1.1970, Total: 1.5770
+VALIDATION — Epoch 114: Box: 0.4790, Cls: 0.2035, DFL: 1.1795, Total: 1.8620

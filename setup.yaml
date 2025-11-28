@@ -1,5 +1,5 @@
-batch_size: 16
-epochs: 500
+batch_size: 8
+epochs: 100
 log_interval: 10
 save_interval: 30
 save_path: "weights"

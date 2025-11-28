@@ -1,15 +1,31 @@
 from configs import TrainingConfig, SaveConfig
 import torch
 import numpy as np
+from ultralytics.utils.torch_utils import ModelEMA
+
+# Need numpy for warmup interpolation
+import numpy as np
 
 class JägerBombTrainer:
     def __init__(self, cfg: TrainingConfig, save_cfg : SaveConfig):
         self.cfg = cfg
         self.save_cfg = save_cfg
+        # Initialize AMP (Automatic Mixed Precision) scaler for better training
+        if torch.cuda.is_available():
+            self.scaler = torch.amp.GradScaler('cuda', enabled=True)
+            self.amp = True
+        else:
+            self.scaler = torch.amp.GradScaler('cpu', enabled=False)
+            self.amp = False
+        # Initialize EMA (Exponential Moving Average) for better generalization
+        self.ema = ModelEMA(self.cfg.model)
+        print("✅ Initialized EMA (Exponential Moving Average)")
         
     @torch.no_grad()
     def _validate(self, epoch):
-        self.cfg.model.eval() 
+        # Use EMA model for validation if available
+        model_to_validate = self.ema.ema if self.ema else self.cfg.model
+        model_to_validate.eval() 
         val_box = 0
         val_cls = 0
         val_dfl = 0
@@ -19,7 +35,7 @@ class JägerBombTrainer:
 
             batch = self._prepare_batch_dict(X_val, y_val)
 
-            pred_val = self.cfg.model(X_val)
+            pred_val = model_to_validate(X_val)
 
             _, last_loss = self.cfg.loss_fn(pred_val, batch)
             box_loss, cls_loss, dfl_loss = last_loss.cpu().numpy().round(3)
@@ -66,27 +82,48 @@ class JägerBombTrainer:
         best_loss = np.inf
         count = 0
         early_stoppage_count = 15
+        
+        # Warmup settings (like Ultralytics)
+        warmup_epochs = 3.0
+        nb = len(self.cfg.train_dataloader)
+        nw = max(round(warmup_epochs * nb), 100)  # number of warmup iterations
+        
         for epoch in range(self.cfg.epochs):
             self.cfg.model.train(True)
             
             for batch_idx, (X, y) in enumerate(self.cfg.train_dataloader):
+                # Warmup learning rate for first few epochs
+                ni = batch_idx + nb * epoch  # number integrated batches
+                if ni <= nw:
+                    xi = [0, nw]  # warmup iteration range
+                    # Warmup: gradually increase LR from 0.1 to target
+                    for j, x in enumerate(self.cfg.optimizer.param_groups):
+                        x['lr'] = np.interp(ni, xi, [0.1 * x['initial_lr'], x['initial_lr']])
                 X, y = X.to(self.cfg.device), y.to(self.cfg.device) 
                 batch = self._prepare_batch_dict(X, y)
-                pred = self.cfg.model.forward(X)
-                batch_loss, last_loss = self.cfg.loss_fn(pred, batch)
-                box_loss, cls_loss, dfl_loss = last_loss.cpu().numpy().round(3)
-                # if not np.allclose([box_loss, dfl_loss], [0.0, 0.0]):
-                #     self.cfg.optimizer.zero_grad()
-                #     batch_loss.sum().backward()
-                #     self.cfg.optimizer.step()
+                # Forward pass with AMP
+                with torch.amp.autocast(device_type='cuda' if self.amp else 'cpu', enabled=self.amp):
+                    pred = self.cfg.model.forward(X)
+                    batch_loss, last_loss = self.cfg.loss_fn(pred, batch)
                 
+                box_loss, cls_loss, dfl_loss = last_loss.detach().cpu().numpy().round(3)
+                loss = batch_loss.sum()
+                
+                # Backward pass with gradient scaling
                 self.cfg.optimizer.zero_grad()
-                # sanity check: loss must require grad
-                if not batch_loss.requires_grad:
-                    raise RuntimeError("batch_loss does not require grad — check loss_fn implementation (should return a tensor connected to model parameters).")
-                if not np.allclose([box_loss, dfl_loss], [0.0, 0.0]):
-                    batch_loss.sum().backward()
-                    self.cfg.optimizer.step()
+                self.scaler.scale(loss).backward()
+                
+                # Gradient clipping (prevents exploding gradients)
+                self.scaler.unscale_(self.cfg.optimizer)
+                torch.nn.utils.clip_grad_norm_(self.cfg.model.parameters(), max_norm=10.0)
+                
+                # Optimizer step with scaler
+                self.scaler.step(self.cfg.optimizer)
+                self.scaler.update()
+                
+                # Update EMA after optimizer step
+                if self.ema:
+                    self.ema.update(self.cfg.model)
 
                 if batch_idx % self.cfg.log_interval == 0:
                     print(
@@ -96,6 +133,14 @@ class JägerBombTrainer:
                     )
 
             curr_val_loss = self._validate(epoch)
+            
+            # Step the learning rate scheduler (only after warmup)
+            if epoch >= warmup_epochs:
+                self.cfg.scheduler.step()
+            
+            current_lr = self.cfg.optimizer.param_groups[0]['lr']
+            print(f"Learning rate: {current_lr:.6f}")
+            
             if(curr_val_loss<best_loss):
                 self._save_model(epoch)
                 best_loss = curr_val_loss

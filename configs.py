@@ -8,6 +8,7 @@ import torch.nn as nn
 class TrainingConfig:
     model: nn.Module
     optimizer: Optimizer
+    scheduler: Any
     train_dataloader : DataLoader
     val_dataloader : DataLoader
     loss_fn : Callable

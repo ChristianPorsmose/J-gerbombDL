@@ -59,9 +59,6 @@ class JägerBombDataset(Dataset):
     def __getitem__(self, index):
         image_path = self.image_files[index]
         image = decode_image(image_path)
-
-        if self.transforms:
-            image = self.transforms(image)
         
         #Check if label file exists
         label_path = self.__get_label_path_from_image_path(image_path)
@@ -96,8 +93,12 @@ class JägerBombDataset(Dataset):
             
             if len(labels) == 0:
                 #print(f"No valid labels found for image: {image_path}\nAt path: {label_path}")
-                return image.to(device), empty_labels.to(device)
-
-            labels_tensor = tensor(labels)
+                labels_tensor = empty_labels
+            else:
+                labels_tensor = tensor(labels)
+            
+            # Apply transforms AFTER loading labels so we can transform both
+            if self.transforms:
+                image, labels_tensor = self.transforms(image, labels_tensor)
 
             return image.to(device), labels_tensor.to(device)
