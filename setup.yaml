@@ -7,3 +7,4 @@ lr: 0.0003
 train_data_path: "/home/dl01e25/dataset_final_boxes_yolo/train.txt"
 val_data_path: "/home/dl01e25/dataset_final_boxes_yolo/val.txt"
 model: "custom_yolo.yaml"
+use_ema: false

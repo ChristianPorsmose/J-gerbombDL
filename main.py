@@ -139,10 +139,6 @@ if __name__ == "__main__":
     torch_model.to(device)
 
     unfreeze_all_layers(torch_model)
-    
-    # Convert args dict to SimpleNamespace so it has attributes instead of dict keys
-    if isinstance(torch_model.args, dict): # DEN HER ER LIGEGYLDIG ?? 
-        torch_model.args = SimpleNamespace(**torch_model.args)
 
     # Now add the hyperparameters as attributes
     torch_model.args = SimpleNamespace(box=15, cls=0.5, dfl=2.25)
@@ -170,11 +166,6 @@ if __name__ == "__main__":
     optimizer.add_param_group({"params": g[1], "weight_decay": 0.0})  # batch norm without decay
     
     print(f"optimizer: AdamW(lr={lr}, momentum={momentum}) with parameter groups {len(g[1])} weight(decay=0.0), {len(g[0])} weight(decay={weight_decay}), {len(g[2])} bias(decay=0.0)")
-
-    # transforms = T.Compose([
-    #     LetterBoxTransform(new_shape=(640, 640)),
-    #     T.ToDtype(torch.float32,scale=True)
-    # ])
 
     # TRAINING transforms with augmentation
     train_transforms = YOLOCompose([
@@ -234,7 +225,8 @@ if __name__ == "__main__":
         device=device,
         epochs=params["epochs"],
         log_interval=params["log_interval"],
-        yolo_model=model
+        yolo_model=model,
+        use_ema=params.get("use_ema", False)
     )
     
     save_cfg = SaveConfig(

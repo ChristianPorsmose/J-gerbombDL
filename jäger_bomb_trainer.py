@@ -13,14 +13,19 @@ class JägerBombTrainer:
         else:
             self.scaler = torch.amp.GradScaler('cpu', enabled=False)
             self.amp = False
-        # EMA disabled for testing
-        self.ema = None
-        print("⚠️ EMA (Exponential Moving Average) disabled")
+        # EMA configurable
+        if getattr(self.cfg, 'use_ema', False):
+            from ultralytics.utils.torch_utils import ModelEMA
+            self.ema = ModelEMA(self.cfg.model)
+            print("✅ EMA (Exponential Moving Average) enabled")
+        else:
+            self.ema = None
+            print("⚠️ EMA (Exponential Moving Average) disabled")
         
     @torch.no_grad()
     def _validate(self, epoch):
-        # Use regular model for validation (EMA disabled)
-        model_to_validate = self.cfg.model
+        # Use EMA model for validation if enabled
+        model_to_validate = self.ema.ema if self.ema else self.cfg.model
         model_to_validate.eval() 
         val_box = 0
         val_cls = 0
@@ -116,6 +121,9 @@ class JägerBombTrainer:
                 # Optimizer step with scaler
                 self.scaler.step(self.cfg.optimizer)
                 self.scaler.update()
+                # Update EMA after optimizer step
+                if self.ema:
+                    self.ema.update(self.cfg.model)
 
                 if batch_idx % self.cfg.log_interval == 0:
                     print(
