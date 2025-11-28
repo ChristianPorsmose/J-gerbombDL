@@ -14,7 +14,7 @@ from torchvision.transforms import v2 as T
 from types import SimpleNamespace
 
 class LetterBoxTransform:
-    def __init__(self, new_shape=(640, 640), color=(114, 114, 114)):
+    def __init__(self, new_shape=(768, 1024), color=(114, 114, 114)):
         self.new_shape = new_shape
         self.color = color
     
@@ -52,14 +52,10 @@ def collate_fn(batch):
     return images, padded_targets
 
 
-def freeze_layers(torch_model, n_layers):
-    ct = 0
+def defrost_layers(torch_model):
     for child in torch_model.children():
-        ct += 1
-        if ct < n_layers:
-            for param in child.parameters():
-                param.requires_grad = False
-
+        for param in child.parameters():
+            param.requires_grad = True
 
 if __name__ == "__main__":
 
@@ -69,12 +65,13 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch.set_default_device(device)
 
-    model = YOLO( params["model"], task="detect")
-    model.nc = 2
+    model = YOLO( params["model"], task="detect").load('yolo11n.pt')
+    
+    #model.names = {1:"cup", 0:"shot"}
     torch_model = model.model
     torch_model.to(device)
 
-    #freeze_layers(torch_model, 10)
+    defrost_layers(torch_model)
 
     # Convert args dict to SimpleNamespace so it has attributes instead of dict keys
     if isinstance(torch_model.args, dict):
@@ -92,7 +89,7 @@ if __name__ == "__main__":
 
     # TRAINING transforms with augmentation
     train_transforms = T.Compose([
-        LetterBoxTransform(new_shape=(640, 480)),
+        LetterBoxTransform(new_shape=(768, 1024)),
         T.RandomHorizontalFlip(p=0.5),
         T.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.05),
         T.RandomGrayscale(p=0.1),
@@ -102,7 +99,7 @@ if __name__ == "__main__":
     
     # VALIDATION transforms (no augmentation!)
     val_transforms = T.Compose([
-        LetterBoxTransform(new_shape=(640, 480)),
+        LetterBoxTransform(new_shape=(768, 1024)),
         T.ToDtype(torch.float32, scale=True)
     ])
 

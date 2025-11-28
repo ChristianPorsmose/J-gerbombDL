@@ -4,7 +4,7 @@ from torchvision.io import read_image, write_jpeg
 from torchvision.utils import draw_bounding_boxes
 import os
 
-def test_image_simple(weights_path, image_path, conf_threshold=0.25, output_path="output.jpg"):
+def test_image_simple(weights_path, image_path, conf_threshold=0.6, output_path="output.jpg"):
     print(f"Loading model from {weights_path}...")
 
     # Correct way to load model
@@ -44,9 +44,9 @@ def test_image_simple(weights_path, image_path, conf_threshold=0.25, output_path
 
 if __name__ == "__main__":
     # Configuration
-    WEIGHTS_PATH = "weights_50.pt"
-    IMAGE_PATH = "Adrian_20251107_094907.jpg"
-    CONFIDENCE_THRESHOLD = 0.25
+    WEIGHTS_PATH = "weights.pt"
+    IMAGE_PATH = "../dataset_final_boxes_yolo/images/Adrian_20251107_094907.jpg"
+    CONFIDENCE_THRESHOLD = 0.6
     OUTPUT_PATH = "detection_result.jpg"
     
     if not os.path.exists(WEIGHTS_PATH):

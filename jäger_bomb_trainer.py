@@ -36,6 +36,7 @@ class JägerBombTrainer:
             f"DFL: {(val_dfl/count):.4f}, "
             f"Total: {((val_box+val_cls+val_dfl)/count):.4f}"
         )
+        return ((val_box+val_cls+val_dfl)/count)
 
     def _prepare_batch_dict(self, images: torch.Tensor, targets: torch.Tensor) -> dict:
         valid_mask = targets[:, :, 0] != -1
@@ -56,13 +57,15 @@ class JägerBombTrainer:
         return {"img": images, "batch_idx": batch_idx, "cls": cls, "bboxes": bboxes}
 
     def _save_model(self, epoch):
-        save_path = f"{self.save_cfg.save_path}_{epoch+1}.pt"
+        save_path = f"{self.save_cfg.save_path}.pt"
         self.cfg.yolo_model.save(save_path)
-        print(f"Model saved at epoch {epoch+1} → {save_path}")  
+        print(f"Model saved at epoch {epoch} → {save_path}")  
 
     def train(self):
         self.cfg.model.to(self.cfg.device)
-
+        best_loss = np.inf
+        count = 0
+        early_stoppage_count = 15
         for epoch in range(self.cfg.epochs):
             self.cfg.model.train(True)
             
@@ -72,10 +75,18 @@ class JägerBombTrainer:
                 pred = self.cfg.model.forward(X)
                 batch_loss, last_loss = self.cfg.loss_fn(pred, batch)
                 box_loss, cls_loss, dfl_loss = last_loss.cpu().numpy().round(3)
+                # if not np.allclose([box_loss, dfl_loss], [0.0, 0.0]):
+                #     self.cfg.optimizer.zero_grad()
+                #     batch_loss.sum().backward()
+                #     self.cfg.optimizer.step()
+                
+                self.cfg.optimizer.zero_grad()
+                # sanity check: loss must require grad
+                if not batch_loss.requires_grad:
+                    raise RuntimeError("batch_loss does not require grad — check loss_fn implementation (should return a tensor connected to model parameters).")
                 if not np.allclose([box_loss, dfl_loss], [0.0, 0.0]):
                     batch_loss.sum().backward()
                     self.cfg.optimizer.step()
-                    self.cfg.optimizer.zero_grad()
 
                 if batch_idx % self.cfg.log_interval == 0:
                     print(
@@ -84,7 +95,14 @@ class JägerBombTrainer:
                         f"Total: {(box_loss+cls_loss+dfl_loss):.4f}"
                     )
 
-            self._validate(epoch)
-
-            if (epoch + 1) % self.save_cfg.save_epoch_interval == 0:
+            curr_val_loss = self._validate(epoch)
+            if(curr_val_loss<best_loss):
                 self._save_model(epoch)
+                best_loss = curr_val_loss
+                count = 0
+            else:
+                count+=1
+            if(count >= early_stoppage_count):
+                break
+            #if (epoch + 1) % self.save_cfg.save_epoch_interval == 0:
+            #    self._save_model(epoch)
