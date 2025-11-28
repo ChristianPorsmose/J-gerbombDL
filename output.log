@@ -1,0 +1,7 @@
+nohup: ignoring input
+Traceback (most recent call last):
+  File "/home/dl01e25/custom_training_loop/main.py", line 11, in <module>
+    from jäger_bomb_trainer import JägerBombTrainer
+  File "/home/dl01e25/custom_training_loop/jäger_bomb_trainer.py", line 1, in <module>
+    from configs import TrainingConfig, SaveConfig
+ModuleNotFoundError: No module named 'configs'
