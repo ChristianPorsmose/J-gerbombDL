@@ -141,12 +141,12 @@ if __name__ == "__main__":
     unfreeze_all_layers(torch_model)
     
     # Convert args dict to SimpleNamespace so it has attributes instead of dict keys
-    if isinstance(torch_model.args, dict):
+    if isinstance(torch_model.args, dict): # DEN HER ER LIGEGYLDIG ?? 
         torch_model.args = SimpleNamespace(**torch_model.args)
 
     # Now add the hyperparameters as attributes
     torch_model.args = SimpleNamespace(box=15, cls=0.5, dfl=2.25)
-    
+
     # Build optimizer with proper parameter groups (like Ultralytics does)
     g = [], [], []  # parameter groups: [weights with decay, weights without decay, biases]
     bn = tuple(v for k, v in torch.nn.__dict__.items() if "Norm" in k)  # normalization layers
