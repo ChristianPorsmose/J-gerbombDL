@@ -131,10 +131,10 @@ def freeze_dfl_conv_weights(torch_model):
     for name, module in torch_model.named_modules():
         if name.endswith('.dfl.conv'):
             for pname, param in module.named_parameters(recurse=False):
+                if pname == 'weight':
                     param.requires_grad = False
                     print(f"✅ Froze DFL convolution weights at path: {name}")
                     found = True
-                    #TODO: TEST IF IT SHOULD FREEZE ALL PARAMETERS IN DFL CONV OR JUST WEIGHTS. WEIGHTS ONLY WAS WIERD RESULTS
     if not found:
         print("❌ Error: Could not locate the DFL convolution module.")
 
@@ -251,9 +251,6 @@ if __name__ == "__main__":
         save_epoch_interval=params["save_interval"],
         save_path=params["save_path"]
     )
-    
-    # Optional: specify experiment name, otherwise uses timestamp
-    experiment_name = params.get("experiment_name", None)
-    trainer = JägerBombTrainer(cfg, save_cfg, experiment_name=experiment_name)
+    trainer = JägerBombTrainer(cfg, save_cfg)
 
     trainer.train()
