@@ -158,12 +158,20 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train Jäger Bomb Detection Model")
     parser.add_argument("--config", type=str, default="setup.yaml", 
                         help="Path to config file (default: setup.yaml)")
+    parser.add_argument("--config-dict", type=str, default=None,
+                        help="Config name from experiment_configs (e.g., PHASE1A_SGD_STANDARD)")
     args = parser.parse_args()
 
-    #with open(args.config, "r") as f:
-    #    params = yaml.safe_load(f)
-    from experiment_configs import PHASE1A_SGD_STANDARD
-    params = PHASE1A_SGD_STANDARD  # Instead of loading from YAML
+    # Load config from dict or YAML file
+    if args.config_dict:
+        import experiment_configs
+        params = getattr(experiment_configs, args.config_dict)
+        print(f"📦 Loaded config: {args.config_dict}")
+    else:
+        with open(args.config, "r") as f:
+            params = yaml.safe_load(f)
+        print(f"📦 Loaded config from: {args.config}")
+    
     # Get experiment name from config parameter
     experiment_name = params.get("experiment_name")
     if experiment_name:
