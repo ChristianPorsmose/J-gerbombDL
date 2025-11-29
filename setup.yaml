@@ -1,10 +1,12 @@
 batch_size: 8
-epochs: 100
+epochs: 30
 log_interval: 10
 save_interval: 30
 save_path: "weights"
 lr: 0.0003
 train_data_path: "/home/dl01e25/dataset_final_boxes_yolo/train.txt"
 val_data_path: "/home/dl01e25/dataset_final_boxes_yolo/val.txt"
+test_data_path: "/home/dl01e25/dataset_final_boxes_yolo/test.txt"
 model: "custom_yolo.yaml"
 use_ema: false
+freeze_dfl: false

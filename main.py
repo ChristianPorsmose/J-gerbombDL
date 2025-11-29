@@ -124,6 +124,20 @@ def unfreeze_all_layers(torch_model):
         param.requires_grad = True
     print("✅ All model layers unfrozen and ready for training")
 
+
+def freeze_dfl_conv_weights(torch_model):
+    """Freeze the weights of dfl.conv layers in the model."""
+    found = False
+    for name, module in torch_model.named_modules():
+        if name.endswith('.dfl.conv'):
+            for pname, param in module.named_parameters(recurse=False):
+                    param.requires_grad = False
+                    print(f"✅ Froze DFL convolution weights at path: {name}")
+                    found = True
+                    #TODO: TEST IF IT SHOULD FREEZE ALL PARAMETERS IN DFL CONV OR JUST WEIGHTS. WEIGHTS ONLY WAS WIERD RESULTS
+    if not found:
+        print("❌ Error: Could not locate the DFL convolution module.")
+
 if __name__ == "__main__":
 
     with open("setup.yaml", "r") as f:
@@ -139,6 +153,9 @@ if __name__ == "__main__":
     torch_model.to(device)
 
     unfreeze_all_layers(torch_model)
+    # Freeze DFL weights if requested in config
+    if params.get("freeze_dfl", False):
+        freeze_dfl_conv_weights(torch_model)
 
     # Now add the hyperparameters as attributes
     torch_model.args = SimpleNamespace(box=15, cls=0.5, dfl=2.25)
@@ -226,13 +243,17 @@ if __name__ == "__main__":
         epochs=params["epochs"],
         log_interval=params["log_interval"],
         yolo_model=model,
-        use_ema=params.get("use_ema", False)
+        use_ema=params.get("use_ema", False),
+        freeze_dfl=params.get("freeze_dfl", False)
     )
     
     save_cfg = SaveConfig(
         save_epoch_interval=params["save_interval"],
         save_path=params["save_path"]
     )
-    trainer = JägerBombTrainer(cfg, save_cfg)
+    
+    # Optional: specify experiment name, otherwise uses timestamp
+    experiment_name = params.get("experiment_name", None)
+    trainer = JägerBombTrainer(cfg, save_cfg, experiment_name=experiment_name)
 
     trainer.train()

@@ -1,0 +1,12 @@
+{
+  "best_mAP50": 0.99272,
+  "best_mAP50_epoch": 17,
+  "best_mAP50-95": 0.96991,
+  "best_mAP50-95_epoch": 30,
+  "best_precision": 0.72558,
+  "best_precision_epoch": 29,
+  "best_recall": 0.99719,
+  "best_recall_epoch": 9,
+  "final_train_loss": 2.03541,
+  "final_val_loss": 1.8020000457763672
+}

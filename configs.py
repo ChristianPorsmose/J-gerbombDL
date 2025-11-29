@@ -16,7 +16,8 @@ class TrainingConfig:
     epochs : int
     log_interval : int
     yolo_model : Any
-    use_ema: bool = False
+    use_ema: bool
+    freeze_dfl: bool
 
 @dataclass
 class SaveConfig:
