@@ -144,14 +144,6 @@ class JägerBombMetrics:
                 'target_img': np.full(nl, self.seen - 1) if nl else np.array([]),
             }
             
-            # Debug first batch
-            if self.seen == 1:
-                print(f"🔍 First batch stats shapes:")
-                for k, v in stats_update.items():
-                    if isinstance(v, np.ndarray):
-                        print(f"   {k}: shape={v.shape}, dtype={v.dtype}")
-                    else:
-                        print(f"   {k}: {type(v)}")
             
             self.det_metrics.update_stats(stats_update)
     

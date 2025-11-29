@@ -18,6 +18,7 @@ class TrainingConfig:
     yolo_model : Any
     use_ema: bool
     freeze_dfl: bool
+    experiment_name: str = None
 
 @dataclass
 class SaveConfig:

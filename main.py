@@ -6,6 +6,7 @@ from torch.nn.utils.rnn import pad_sequence
 from ultralytics.models import YOLO
 import os
 import math
+from pathlib import Path
 
 from jäger_bomb_dataset import JägerBombDataset
 from jäger_bomb_loss import JägerBombLoss
@@ -125,6 +126,19 @@ def unfreeze_all_layers(torch_model):
     print("✅ All model layers unfrozen and ready for training")
 
 
+def freeze_backbone_layers(torch_model):
+    """Freeze the backbone layers of the model (first N layers before detection head)."""
+    frozen_count = 0
+    # Freeze all layers in model.model (backbone)
+    for name, param in torch_model.named_parameters():
+        # Freeze everything except the detection head (last layers)
+        # Detection head typically starts with 'model.22' or similar in YOLO11
+        if not any(x in name for x in ['model.22', 'model.23', 'cv2', 'cv3', 'dfl']):
+            param.requires_grad = False
+            frozen_count += 1
+    print(f"✅ Froze {frozen_count} backbone parameters (keeping detection head trainable)")
+
+
 def freeze_dfl_conv_weights(torch_model):
     """Freeze the weights of dfl.conv layers in the model."""
     found = False
@@ -139,9 +153,21 @@ def freeze_dfl_conv_weights(torch_model):
         print("❌ Error: Could not locate the DFL convolution module.")
 
 if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Train Jäger Bomb Detection Model")
+    parser.add_argument("--config", type=str, default="setup.yaml", 
+                        help="Path to config file (default: setup.yaml)")
+    args = parser.parse_args()
 
-    with open("setup.yaml", "r") as f:
-        params = yaml.safe_load(f)
+    #with open(args.config, "r") as f:
+    #    params = yaml.safe_load(f)
+    from experiment_configs import PHASE1A_SGD_STANDARD
+    params = PHASE1A_SGD_STANDARD  # Instead of loading from YAML
+    # Get experiment name from config parameter
+    experiment_name = params.get("experiment_name")
+    if experiment_name:
+        print(f"🧪 Running experiment: {experiment_name}")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch.set_default_device(device)
@@ -153,6 +179,11 @@ if __name__ == "__main__":
     torch_model.to(device)
 
     unfreeze_all_layers(torch_model)
+    
+    # Freeze backbone if requested in config
+    if params.get("freeze_backbone", False):
+        freeze_backbone_layers(torch_model)
+    
     # Freeze DFL weights if requested in config
     if params.get("freeze_dfl", False):
         freeze_dfl_conv_weights(torch_model)
@@ -175,24 +206,44 @@ if __name__ == "__main__":
                 g[0].append(param)
     
     # Use AdamW with proper weight decay setup
-    lr = 0.001667
+    lr = params.get("lr", 0.001667)
     momentum = 0.9
-    weight_decay = 0.0005625
+    weight_decay = params.get("weight_decay", 0.0005625)
     optimizer = torch.optim.AdamW(g[2], lr=lr, betas=(momentum, 0.999), weight_decay=0.0)
     optimizer.add_param_group({"params": g[0], "weight_decay": weight_decay})  # weights with decay
     optimizer.add_param_group({"params": g[1], "weight_decay": 0.0})  # batch norm without decay
     
     print(f"optimizer: AdamW(lr={lr}, momentum={momentum}) with parameter groups {len(g[1])} weight(decay=0.0), {len(g[0])} weight(decay={weight_decay}), {len(g[2])} bias(decay=0.0)")
 
-    # TRAINING transforms with augmentation
-    train_transforms = YOLOCompose([
-        LetterBoxTransform(new_shape=(640, 640)),
-        T.RandomHorizontalFlip(p=0.5),
-        T.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.05),
-        T.RandomGrayscale(p=0.1),
-        T.GaussianBlur(kernel_size=5, sigma=(0.1, 2.0)),
-        T.ToDtype(torch.float32, scale=True)
-    ])
+    # TRAINING transforms - augmentation mode based on config
+    augmentation_mode = params.get("augmentation", "full")
+    
+    if augmentation_mode == "none":
+        # No augmentation - resize only
+        train_transform_list = [
+            LetterBoxTransform(new_shape=(640, 640)),
+            T.ToDtype(torch.float32, scale=True)
+        ]
+    elif augmentation_mode == "geometric":
+        # Geometric augmentations only (generic)
+        train_transform_list = [
+            LetterBoxTransform(new_shape=(640, 640)),
+            T.RandomHorizontalFlip(p=0.5),
+            T.RandomRotation(degrees=10),
+            T.ToDtype(torch.float32, scale=True)
+        ]
+    else:  # "full" - custom augmentations for disco/club environment
+        train_transform_list = [
+            LetterBoxTransform(new_shape=(640, 640)),
+            T.RandomHorizontalFlip(p=0.5),
+            T.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.05),
+            T.RandomGrayscale(p=0.1),
+            T.GaussianBlur(kernel_size=5, sigma=(0.1, 2.0)),
+            T.ToDtype(torch.float32, scale=True)
+        ]
+    
+    train_transforms = YOLOCompose(train_transform_list)
+    print(f"Augmentation mode: {augmentation_mode}")
     
     # VALIDATION transforms (no augmentation!)
     val_transforms = YOLOCompose([
@@ -244,7 +295,8 @@ if __name__ == "__main__":
         log_interval=params["log_interval"],
         yolo_model=model,
         use_ema=params.get("use_ema", False),
-        freeze_dfl=params.get("freeze_dfl", False)
+        freeze_dfl=params.get("freeze_dfl", False),
+        experiment_name=experiment_name
     )
     
     save_cfg = SaveConfig(

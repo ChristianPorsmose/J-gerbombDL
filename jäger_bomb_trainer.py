@@ -40,7 +40,15 @@ class JägerBombTrainer:
         
         # Create unique save directory with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        save_dir = Path("runs") / f"train_{timestamp}"
+        
+        # Check if running an experiment (config loaded from experiments/ folder)
+        experiment_name = getattr(self.cfg, 'experiment_name', None)
+        if experiment_name:
+            # Save under the experiment folder
+            save_dir = Path("experiments") / experiment_name / "runs" / f"train_{timestamp}"
+        else:
+            # Default runs folder
+            save_dir = Path("runs") / f"train_{timestamp}"
         
         self.metrics = JägerBombMetrics(
             names=names,

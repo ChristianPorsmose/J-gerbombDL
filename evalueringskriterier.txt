@@ -1,0 +1,120 @@
+Decision Metrics Per Phase
+PHASE 1A: Optimizer Selection
+Primary Metric: Final mAP@0.5 (highest wins)
+
+Secondary Metrics:
+
+Train-Val Loss Gap (meta) - Overfitting indicator
+
+Calculate: (train_loss - val_loss) / train_loss × 100%
+Target: <15% gap
+Lower = better generalization
+Convergence Speed (meta) - Efficiency
+
+Which epoch reaches 95% of final mAP?
+Faster = more data-efficient optimizer
+Stability (meta) - Reliability
+
+Check val_loss curve smoothness
+No wild oscillations = stable training
+Decision Rule:
+
+If mAP difference <2%: Choose most stable + fastest convergence
+If mAP difference >2%: Choose highest mAP (performance > speed)
+PHASE 1B: Transfer Learning
+Primary Metric: mAP@0.5 improvement vs Phase 1A winner
+
+Secondary Metrics:
+
+Train-Val Gap Reduction (meta) - Key for small datasets
+
+Calculate: Phase1A_gap - Phase1B_gap
+Positive reduction = freezing helps generalization
+Per-Class mAP - Does freezing hurt small objects?
+
+Compare shot vs cup vs full_cup detection
+If small object mAP drops >5%: freezing hurts
+Decision Rule:
+
+Freeze if: mAP stays within 1-2% AND train-val gap improves >3%
+Don't freeze if: mAP drops >2% (backbone features too important)
+PHASE 2: Data Efficiency
+Primary Metric: Marginal mAP Gain (meta)
+
+Calculate: ΔmAP / Δimages for each step
+Example: (mAP₁₀₀ - mAP₅₀) / 50 images = gain per image
+Secondary Metrics:
+
+Plateau Detection (meta)
+
+Where does gain drop below 0.001 mAP per image?
+That's your "minimum viable dataset"
+Cost-Benefit (meta)
+
+Label 50 images = ~2 hours
+Is +2% mAP worth 2 more hours of labeling?
+Decision Rule:
+
+Use dataset size where marginal gain <0.001 per image
+Write in thesis: "Performance saturates at X images, further data collection yields diminishing returns"
+PHASE 3: Augmentation
+Primary Metric: mAP@0.5 absolute difference
+
+domain_aug - generic_aug = improvement from domain knowledge
+Secondary Metrics:
+
+Precision Improvement - False positive reduction
+
+Domain aug should reduce false positives in hard lighting
+Target: >5% precision gain
+Per-Class Recall - Does augmentation hurt any class?
+
+Check if "full_cup" recall drops (overfitting to occlusion)
+Confusion Matrix Comparison (qualitative)
+
+Count specific error types (shot→background, cup→full_cup)
+Decision Rule:
+
+Use domain augmentation if mAP improves >3%
+If only 1-2% improvement: Check precision - if >5% gain, still use it
+Write in thesis: "Domain-specific augmentation improved mAP by X% by reducing Y error type"
+PHASE 4: Novel Loss (Your Contribution)
+Primary Metric: NOT just mAP - This is critical!
+
+Spatial Consistency Metrics (custom):
+
+Floating Shot Count (qualitative)
+
+Manual count: shots detected >100px from any cup
+Standard loss vs your loss
+Average Shot-Cup Distance (quantitative)
+
+Calculate: For each detected shot, find nearest cup
+Target: <30px average distance
+Confusion Matrix Diff (qualitative)
+
+Shot→background errors (false negatives)
+Background→shot errors (false positives in wrong location)
+Secondary Metrics:
+
+mAP@0.5 - Should stay within 2% (loss change shouldn't hurt overall performance)
+Recall@High_IoU - Check mAP@0.75 (tighter localization)
+Decision Rule:
+
+Your loss succeeds if:
+Floating shots reduced >50%
+Shot-cup distance improved >30%
+mAP penalty <2%
+Thesis Narrative:
+
+"While mAP improved only 1%, spatial consistency metrics show 67% reduction in physically impossible predictions"
+"Domain-aware loss enforces real-world constraints without sacrificing detection performance"
+Summary Table
+Phase	Primary Metric	Key Meta-Metrics	Decision Threshold
+1A	mAP@0.5	Train-val gap, Convergence speed	>2% mAP diff → pick highest
+1B	ΔmAP vs 1A	Train-val gap reduction	Freeze if gap reduces >3%
+2	Marginal gain	Plateau point (gain/image)	Stop at <0.001 gain/image
+3	ΔmAP (domain vs generic)	Precision gain, Per-class recall	Domain aug if >3% mAP or >5% precision
+4	Floating shots, Shot-cup distance	Confusion matrix, mAP penalty	Success if spatial metrics >30% better, mAP <2% penalty
+Meta-metrics = derived from multiple raw metrics (gaps, speeds, marginal gains)
+Raw metrics = direct model outputs (mAP, precision, recall, loss)
