@@ -190,10 +190,27 @@ class JägerBombTrainer:
 
         return {"img": images, "batch_idx": batch_idx, "cls": cls, "bboxes": bboxes}
 
-    def _save_model(self, epoch):
-        save_path = f"{self.save_cfg.save_path}.pt"
-        self.cfg.yolo_model.save(save_path)
-        print(f"Model saved at epoch {epoch} → {save_path}")  
+    def _save_model(self, epoch, is_best=False):
+        """Save model checkpoint."""
+        # Save to experiment-specific directory if available
+        if hasattr(self.metrics, 'save_dir'):
+            save_dir = Path(self.metrics.save_dir) / "weights"
+        else:
+            save_dir = Path(self.save_cfg.save_path).parent
+        
+        save_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Save last.pt (always)
+        last_path = save_dir / "last.pt"
+        self.cfg.yolo_model.save(str(last_path))
+        
+        # Save best.pt (only when validation improves)
+        if is_best:
+            best_path = save_dir / "best.pt"
+            self.cfg.yolo_model.save(str(best_path))
+            print(f"✅ Model saved at epoch {epoch} → {best_path}")
+        else:
+            print(f"💾 Checkpoint saved → {last_path}")  
 
     def train(self):
         self.cfg.model.to(self.cfg.device)
@@ -311,10 +328,11 @@ class JägerBombTrainer:
             # Model saving based on validation loss
             curr_val_loss = val_losses['total']
             if curr_val_loss < best_loss:
-                self._save_model(epoch)
+                self._save_model(epoch, is_best=True)
                 best_loss = curr_val_loss
                 count = 0
             else:
+                self._save_model(epoch, is_best=False)
                 count += 1
             
             if count >= early_stoppage_count:

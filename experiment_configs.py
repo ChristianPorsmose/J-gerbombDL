@@ -37,6 +37,7 @@ PHASE1A_SGD_STANDARD = {
     "save_path": "weights",
     "optimizer": "SGD",
     "lr": 0.01,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
     "momentum": 0.937,
     "weight_decay": 0.0005,
     "freeze_backbone": False,
@@ -57,6 +58,7 @@ PHASE1A_SGD_CONSERVATIVE = {
     "save_path": "weights",
     "optimizer": "SGD",
     "lr": 0.001,  # 10x lower
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
     "momentum": 0.937,
     "weight_decay": 0.001,  # 2x higher for regularization
     "freeze_backbone": False,
@@ -77,6 +79,7 @@ PHASE1A_ADAMW_STANDARD = {
     "save_path": "weights",
     "optimizer": "AdamW",
     "lr": 0.001,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
     "weight_decay": 0.0005,
     "freeze_backbone": False,
     "freeze_dfl": False,
@@ -96,6 +99,7 @@ PHASE1A_ADAMW_CONSERVATIVE = {
     "save_path": "weights",
     "optimizer": "AdamW",
     "lr": 0.0001,  # 10x lower
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
     "weight_decay": 0.001,  # 2x higher for regularization
     "freeze_backbone": False,
     "freeze_dfl": False,
@@ -115,6 +119,7 @@ PHASE1A_ADAMW_AGGRESSIVE = {
     "save_path": "weights",
     "optimizer": "AdamW",
     "lr": 0.003,  # 3x higher
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
     "weight_decay": 0.0003,  # Lower decay for faster learning
     "freeze_backbone": False,
     "freeze_dfl": False,

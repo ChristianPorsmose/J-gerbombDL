@@ -127,6 +127,7 @@ if __name__ == "__main__":
     
     # Example: Run all Phase 1A experiments
     EXPERIMENT_QUEUE = [
+        "PHASE1A_SGD_STANDARD",
         "PHASE1A_SGD_CONSERVATIVE",
         "PHASE1A_ADAMW_STANDARD",
         "PHASE1A_ADAMW_CONSERVATIVE",

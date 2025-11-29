@@ -277,15 +277,22 @@ if __name__ == "__main__":
         generator=torch.Generator(device)
     )
     
-    # Setup learning rate scheduler (cosine decay like Ultralytics)
-    def one_cycle_lr(epoch):
-        """Cosine learning rate schedule from 1.0 to lrf over epochs."""
-        lrf = 0.01  # final learning rate factor (1% of initial)
-        # Cosine annealing: starts at 1.0, ends at lrf
-        return lrf + (1 - lrf) * 0.5 * (1 + math.cos(math.pi * epoch / params["epochs"]))
+    # Setup learning rate scheduler
+    lr_scheduler_type = params.get("lr_scheduler", "fixed")  # Default to fixed
     
-    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=one_cycle_lr)
-    print(f"Learning rate scheduler: cosine decay from {lr:.6f} to {lr * 0.01:.6f} over {params['epochs']} epochs")
+    if lr_scheduler_type == "cosine":
+        def one_cycle_lr(epoch):
+            """Cosine learning rate schedule from 1.0 to lrf over epochs."""
+            lrf = 0.01  # final learning rate factor (1% of initial)
+            # Cosine annealing: starts at 1.0, ends at lrf
+            return lrf + (1 - lrf) * 0.5 * (1 + math.cos(math.pi * epoch / params["epochs"]))
+        
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=one_cycle_lr)
+        print(f"Learning rate scheduler: cosine decay from {lr:.6f} to {lr * 0.01:.6f} over {params['epochs']} epochs")
+    else:
+        # Fixed learning rate (no scheduler)
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda epoch: 1.0)
+        print(f"Learning rate: fixed at {lr:.6f}")
 
     #print("Dataset length:", len(train_dataset))
     #print("Testing __getitem__")
