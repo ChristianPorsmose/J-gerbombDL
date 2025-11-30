@@ -197,8 +197,8 @@ PHASE1B_FROZEN_HALF = {
     "weight_decay": 0.0005,
     "freeze_dfl": False,
     "use_ema": False,
-    "augmentation": "none",    # Keep the winning LR from Phase 1A
     "freeze_backbone_layers": 5,
+    "augmentation": "none",    # Keep the winning LR from Phase 1A
     # "lr": <divide Phase 1A winner LR by 3>
 }
 
@@ -210,55 +210,348 @@ PHASE1B_FROZEN_HALF = {
 
 PHASE2_NO_AUGMENTATION_20_IMAGES = {
     "experiment_name": "phase2_no_augmentation_20_images",
+     "model": "custom_yolo.yaml",
+    "train_data_path": "/home/dl01e25/dataset_final_boxes_yolo/train.txt",
+    "val_data_path": "/home/dl01e25/dataset_final_boxes_yolo/val.txt",
+    "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
+    "batch_size": 8,
+    "epochs": 100,
+    "log_interval": 10,
+    "save_interval": 30,
+    "save_path": "weights",
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
+    "weight_decay": 0.0005,
+    "freeze_dfl": False,
+    "use_ema": False,
+    "freeze_backbone_layers": 0,
+    "dataset_size": 0.125,  # Approx 20 images
     "augmentation": "none",  # Resize only
 }
 
 PHASE2_NO_AUGMENTATION_40_IMAGES = {
     "experiment_name": "phase2_no_augmentation_40_images",
+     "model": "custom_yolo.yaml",
+    "train_data_path": "/home/dl01e25/dataset_final_boxes_yolo/train.txt",
+    "val_data_path": "/home/dl01e25/dataset_final_boxes_yolo/val.txt",
+    "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
+    "batch_size": 8,
+    "epochs": 100,
+    "log_interval": 10,
+    "save_interval": 30,
+    "save_path": "weights",
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
+    "weight_decay": 0.0005,
+    "freeze_dfl": False,
+    "use_ema": False,
+    "freeze_backbone_layers": 0,
+    "dataset_size": 0.25,  # Approx 40 images
     "augmentation": "none",  # Resize only
 }
 
 PHASE2_NO_AUGMENTATION_80_IMAGES = {
     "experiment_name": "phase2_no_augmentation_80_images",
+     "model": "custom_yolo.yaml",
+    "train_data_path": "/home/dl01e25/dataset_final_boxes_yolo/train.txt",
+    "val_data_path": "/home/dl01e25/dataset_final_boxes_yolo/val.txt",
+    "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
+    "batch_size": 8,
+    "epochs": 100,
+    "log_interval": 10,
+    "save_interval": 30,
+    "save_path": "weights",
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
+    "weight_decay": 0.0005,
+    "freeze_dfl": False,
+    "use_ema": False,
+    "freeze_backbone_layers": 0,
+    "dataset_size": 0.5,  # Approx 80 images
     "augmentation": "none",  # Resize only
 }
 
 PHASE2_NO_AUGMENTATION_ALL_IMAGES = {
     "experiment_name": "phase2_no_augmentation_all_images",
+     "model": "custom_yolo.yaml",
+    "train_data_path": "/home/dl01e25/dataset_final_boxes_yolo/train.txt",
+    "val_data_path": "/home/dl01e25/dataset_final_boxes_yolo/val.txt",
+    "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
+    "batch_size": 8,
+    "epochs": 100,
+    "log_interval": 10,
+    "save_interval": 30,
+    "save_path": "weights",
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
+    "weight_decay": 0.0005,
+    "freeze_dfl": False,
+    "use_ema": False,
+    "freeze_backbone_layers": 0,
+    "dataset_size": 1.0,  # All images
     "augmentation": "none",  # Resize only
 }
 
 #Light related aug only
 PHASE2_LIGHT_AUGMENTATION_20_IMAGES = {
     "experiment_name": "phase2_light_augmentation_20_images",
+     "model": "custom_yolo.yaml",
+    "train_data_path": "/home/dl01e25/dataset_final_boxes_yolo/train.txt",
+    "val_data_path": "/home/dl01e25/dataset_final_boxes_yolo/val.txt",
+    "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
+    "batch_size": 8,
+    "epochs": 100,
+    "log_interval": 10,
+    "save_interval": 30,
+    "save_path": "weights",
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
+    "weight_decay": 0.0005,
+    "freeze_dfl": False,
+    "use_ema": False,
+    "freeze_backbone_layers": 0,
+    "dataset_size": 0.125,  # Approx 20 images
     "augmentation": "light",
 }
 PHASE2_LIGHT_AUGMENTATION_40_IMAGES = {
     "experiment_name": "phase2_light_augmentation_40_images",
+     "model": "custom_yolo.yaml",
+    "train_data_path": "/home/dl01e25/dataset_final_boxes_yolo/train.txt",
+    "val_data_path": "/home/dl01e25/dataset_final_boxes_yolo/val.txt",
+    "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
+    "batch_size": 8,
+    "epochs": 100,
+    "log_interval": 10,
+    "save_interval": 30,
+    "save_path": "weights",
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
+    "weight_decay": 0.0005,
+    "freeze_dfl": False,
+    "use_ema": False,
+    "freeze_backbone_layers": 0,
+    "dataset_size": 0.25,  # Approx 40 images
     "augmentation": "light",  
 }
 PHASE2_LIGHT_AUGMENTATION_80_IMAGES = {
     "experiment_name": "phase2_light_augmentation_80_images",
+     "model": "custom_yolo.yaml",
+    "train_data_path": "/home/dl01e25/dataset_final_boxes_yolo/train.txt",
+    "val_data_path": "/home/dl01e25/dataset_final_boxes_yolo/val.txt",
+    "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
+    "batch_size": 8,
+    "epochs": 100,
+    "log_interval": 10,
+    "save_interval": 30,
+    "save_path": "weights",
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
+    "weight_decay": 0.0005,
+    "freeze_dfl": False,
+    "use_ema": False,
+    "freeze_backbone_layers": 0,
+    "dataset_size": 0.5,  # Approx 80 images
     "augmentation": "light", 
 }
 PHASE2_LIGHT_AUGMENTATION_ALL_IMAGES = {
     "experiment_name": "phase2_light_augmentation_all_images",
+     "model": "custom_yolo.yaml",
+    "train_data_path": "/home/dl01e25/dataset_final_boxes_yolo/train.txt",
+    "val_data_path": "/home/dl01e25/dataset_final_boxes_yolo/val.txt",
+    "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
+    "batch_size": 8,
+    "epochs": 100,
+    "log_interval": 10,
+    "save_interval": 30,
+    "save_path": "weights",
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
+    "weight_decay": 0.0005,
+    "freeze_dfl": False,
+    "use_ema": False,
+    "freeze_backbone_layers": 0,
+    "dataset_size": 1.0,  # All images
     "augmentation": "light",  
 }
 
 
 PHASE2_GEO_AUGMENTATION_20_IMAGES = {
-    # TODO: Copy BEST config from Phase 1
-    "augmentation": "full",  # Your custom disco/occlusion pipeline
+    "experiment_name": "phase2_geo_augmentation_20_images",
+     "model": "custom_yolo.yaml",
+    "train_data_path": "/home/dl01e25/dataset_final_boxes_yolo/train.txt",
+    "val_data_path": "/home/dl01e25/dataset_final_boxes_yolo/val.txt",
+    "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
+    "batch_size": 8,
+    "epochs": 100,
+    "log_interval": 10,
+    "save_interval": 30,
+    "save_path": "weights",
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
+    "weight_decay": 0.0005,
+    "freeze_dfl": False,
+    "use_ema": False,
+    "freeze_backbone_layers": 0,
+    "dataset_size": 0.125,  # Approx 20 images
+    "augmentation": "geometric", 
 }
-PHASE2_GEO_AUGMENTATION_40_IMAGES = {}
-PHASE2_GEO_AUGMENTATION_80_IMAGES = {}
-PHASE2_GEO_AUGMENTATION_ALL_IMAGES = {}
+PHASE2_GEO_AUGMENTATION_40_IMAGES = {
+    "experiment_name": "phase2_geo_augmentation_40_images",
+     "model": "custom_yolo.yaml",
+    "train_data_path": "/home/dl01e25/dataset_final_boxes_yolo/train.txt",
+    "val_data_path": "/home/dl01e25/dataset_final_boxes_yolo/val.txt",
+    "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
+    "batch_size": 8,
+    "epochs": 100,
+    "log_interval": 10,
+    "save_interval": 30,
+    "save_path": "weights",
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
+    "weight_decay": 0.0005,
+    "freeze_dfl": False,
+    "use_ema": False,
+    "freeze_backbone_layers": 0,
+    "augmentation": "geometric", 
+    "dataset_size": 0.25,  # Approx 40 images
+}
+PHASE2_GEO_AUGMENTATION_80_IMAGES = {
+    "experiment_name": "phase2_geo_augmentation_80_images",
+    "model": "custom_yolo.yaml",
+    "train_data_path": "/home/dl01e25/dataset_final_boxes_yolo/train.txt",
+    "val_data_path": "/home/dl01e25/dataset_final_boxes_yolo/val.txt",
+    "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
+    "batch_size": 8,
+    "epochs": 100,
+    "log_interval": 10,
+    "save_interval": 30,
+    "save_path": "weights",
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
+    "weight_decay": 0.0005,
+    "freeze_dfl": False,
+    "use_ema": False,
+    "freeze_backbone_layers": 0,
+    "augmentation": "geometric", 
+    "dataset_size": 0.5,  # Approx 80 images
+}
+PHASE2_GEO_AUGMENTATION_ALL_IMAGES = {
+    "experiment_name": "phase2_geo_augmentation_all_images",
+    "model": "custom_yolo.yaml",
+    "train_data_path": "/home/dl01e25/dataset_final_boxes_yolo/train.txt",
+    "val_data_path": "/home/dl01e25/dataset_final_boxes_yolo/val.txt",
+    "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
+    "batch_size": 8,
+    "epochs": 100,
+    "log_interval": 10,
+    "save_interval": 30,
+    "save_path": "weights",
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
+    "weight_decay": 0.0005,
+    "freeze_dfl": False,
+    "use_ema": False,
+    "freeze_backbone_layers": 0,
+    "augmentation": "geometric", 
+    "dataset_size": 1.0,  # All images
+}
 
-PHASE2_FULL_AUGMENTATION_20_IMAGES = {}
-PHASE2_FULL_AUGMENTATION_40_IMAGES = {}
-PHASE2_FULL_AUGMENTATION_80_IMAGES = {}
-PHASE2_FULL_AUGMENTATION_ALL_IMAGES = {}
+PHASE2_FULL_AUGMENTATION_20_IMAGES = {
+    "experiment_name": "phase2_full_augmentation_20_images",
+    "model": "custom_yolo.yaml",
+    "train_data_path": "/home/dl01e25/dataset_final_boxes_yolo/train.txt",
+    "val_data_path": "/home/dl01e25/dataset_final_boxes_yolo/val.txt",
+    "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
+    "batch_size": 8,
+    "epochs": 100,
+    "log_interval": 10,
+    "save_interval": 30,
+    "save_path": "weights",
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
+    "weight_decay": 0.0005,
+    "freeze_dfl": False,
+    "use_ema": False,
+    "freeze_backbone_layers": 0,
+    "augmentation": "full", 
+    "dataset_size": 0.125,  # Approx 20 images
+}
+PHASE2_FULL_AUGMENTATION_40_IMAGES = {
+    "experiment_name": "phase2_full_augmentation_40_images",
+    "model": "custom_yolo.yaml",
+    "train_data_path": "/home/dl01e25/dataset_final_boxes_yolo/train.txt",
+    "val_data_path": "/home/dl01e25/dataset_final_boxes_yolo/val.txt",
+    "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
+    "batch_size": 8,
+    "epochs": 100,
+    "log_interval": 10,
+    "save_interval": 30,
+    "save_path": "weights",
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
+    "weight_decay": 0.0005,
+    "freeze_dfl": False,
+    "use_ema": False,
+    "freeze_backbone_layers": 0,
+    "augmentation": "full", 
+    "dataset_size": 0.25,  # Approx 40 images
+}
+PHASE2_FULL_AUGMENTATION_80_IMAGES = {
+    "experiment_name": "phase2_full_augmentation_80_images",
+    "model": "custom_yolo.yaml",
+    "train_data_path": "/home/dl01e25/dataset_final_boxes_yolo/train.txt",
+    "val_data_path": "/home/dl01e25/dataset_final_boxes_yolo/val.txt",
+    "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
+    "batch_size": 8,
+    "epochs": 100,
+    "log_interval": 10,
+    "save_interval": 30,
+    "save_path": "weights",
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
+    "weight_decay": 0.0005,
+    "freeze_dfl": False,
+    "use_ema": False,
+    "freeze_backbone_layers": 0,
+    "augmentation": "full", 
+    "dataset_size": 0.5,  # Approx 80 images
+}
+PHASE2_FULL_AUGMENTATION_ALL_IMAGES = {
+    "experiment_name": "phase2_full_augmentation_all_images",
+    "model": "custom_yolo.yaml",
+    "train_data_path": "/home/dl01e25/dataset_final_boxes_yolo/train.txt",
+    "val_data_path": "/home/dl01e25/dataset_final_boxes_yolo/val.txt",
+    "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
+    "batch_size": 8,
+    "epochs": 100,
+    "log_interval": 10,
+    "save_interval": 30,
+    "save_path": "weights",
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
+    "weight_decay": 0.0005,
+    "freeze_dfl": False,
+    "use_ema": False,
+    "freeze_backbone_layers": 0,
+    "augmentation": "full", 
+    "dataset_size": 1.0,  # All images
+}
 
 # ========== PHASE 4: Novel Contribution - Spatial Consistency Loss (2 runs) ==========
 # Goal: Validate your 10 ECTS contribution

@@ -518,15 +518,24 @@ if __name__ == "__main__":
             # Take first N paths (ensures nesting property)
             sampled_paths = all_train_paths_shuffled[:desired_size]
             
-            # Create temporary file with sampled paths
+            # Create temporary file in the SAME DIRECTORY as original file
+            # This is critical because the dataset prepends "../" and looks for labels/ relative to the file location
             import tempfile
-            temp_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt')
+            import os
+            orig_dir = os.path.dirname(train_data_path)
+            temp_file = tempfile.NamedTemporaryFile(
+                mode='w', 
+                delete=False, 
+                suffix='.txt',
+                dir=orig_dir  # Create temp file in same directory as original
+            )
             for path in sampled_paths:
                 temp_file.write(path + '\n')
             temp_file.close()
             train_data_path = temp_file.name
             
             print(f"📊 Dataset size limiting: Using {desired_size}/{len(all_train_paths)} training images (NESTED subset)")
+            print(f"📁 Temp file created: {train_data_path}")
         else:
             print(f"📊 Dataset size: Using all {len(all_train_paths)} training images")
 

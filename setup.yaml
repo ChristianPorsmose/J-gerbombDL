@@ -1,5 +1,5 @@
 batch_size: 8
-epochs: 40
+epochs: 10
 log_interval: 10
 save_interval: 30
 save_path: "weights"
@@ -11,7 +11,7 @@ val_data_path: "/home/dl01e25/dataset_final_boxes_yolo/val.txt"
 test_data_path: "/home/dl01e25/dataset_final_boxes_yolo/test.txt"
 model: "custom_yolo.yaml"
 "loss_type": "standard"
-dataset_size: 1.0
+dataset_size: 0.125
 augmentation: "full"
 use_ema: false
 freeze_dfl: false
