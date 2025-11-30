@@ -59,6 +59,128 @@ class JägerBombTrainer:
             device=self.cfg.device
         )
         print(f"✅ Metrics tracking initialized → {save_dir}")
+        
+        # Store config parameters for logging
+        self.config_params = getattr(self.cfg, 'config_params', None)
+    
+    def _log_config_params(self):
+        """Log all configuration parameters to a file."""
+        import json
+        config_path = Path(self.metrics.save_dir) / "config.json"
+        
+        # Convert all values to JSON-serializable format
+        def convert_to_serializable(obj):
+            if isinstance(obj, Path):
+                return str(obj)
+            elif isinstance(obj, (np.integer, np.floating)):
+                return obj.item()
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, dict):
+                return {k: convert_to_serializable(v) for k, v in obj.items()}
+            elif isinstance(obj, (list, tuple)):
+                return [convert_to_serializable(item) for item in obj]
+            elif hasattr(obj, '__dict__'):
+                return str(obj)
+            else:
+                return obj
+        
+        # Collect all TrainingConfig parameters
+        config_data = {}
+        
+        # Add config_params if available (original YAML/dict config)
+        if self.config_params is not None:
+            config_data['original_config'] = convert_to_serializable(self.config_params)
+        
+        # Add all TrainingConfig attributes
+        config_data['training_config'] = {
+            'device': self.cfg.device,
+            'epochs': self.cfg.epochs,
+            'log_interval': self.cfg.log_interval,
+            'use_ema': self.cfg.use_ema,
+            'freeze_dfl': self.cfg.freeze_dfl,
+            'experiment_name': self.cfg.experiment_name,
+            'loss_type': self.cfg.loss_type,
+        }
+        
+        # Add optimizer info
+        config_data['optimizer'] = {
+            'type': type(self.cfg.optimizer).__name__,
+            'param_groups': []
+        }
+        for i, pg in enumerate(self.cfg.optimizer.param_groups):
+            pg_info = {
+                'group_id': i,
+                'num_params': len(pg['params']),
+                'lr': pg.get('lr', 'N/A'),
+                'weight_decay': pg.get('weight_decay', 'N/A'),
+                'momentum': pg.get('momentum', 'N/A'),
+                'betas': pg.get('betas', 'N/A'),
+            }
+            config_data['optimizer']['param_groups'].append(pg_info)
+        
+        # Add scheduler info
+        config_data['scheduler'] = {
+            'type': type(self.cfg.scheduler).__name__,
+        }
+        
+        # Add dataloader info
+        config_data['dataloaders'] = {
+            'train': {
+                'batch_size': self.cfg.train_dataloader.batch_size,
+                'num_batches': len(self.cfg.train_dataloader),
+                'dataset_size': len(self.cfg.train_dataloader.dataset),
+            },
+            'val': {
+                'batch_size': self.cfg.val_dataloader.batch_size,
+                'num_batches': len(self.cfg.val_dataloader),
+                'dataset_size': len(self.cfg.val_dataloader.dataset),
+            },
+            'test': {
+                'batch_size': self.cfg.test_dataloader.batch_size,
+                'num_batches': len(self.cfg.test_dataloader),
+                'dataset_size': len(self.cfg.test_dataloader.dataset),
+            }
+        }
+        
+        # Add loss function info
+        config_data['loss_function'] = {
+            'type': type(self.cfg.loss_fn).__name__,
+        }
+        
+        # Add model info
+        config_data['model'] = {
+            'type': type(self.cfg.model).__name__,
+            'total_params': sum(p.numel() for p in self.cfg.model.parameters()),
+            'trainable_params': sum(p.numel() for p in self.cfg.model.parameters() if p.requires_grad),
+        }
+        
+        with open(config_path, 'w') as f:
+            json.dump(config_data, f, indent=2)
+        
+        print(f"📝 Configuration parameters saved → {config_path}")
+        
+        # Also print key parameters to console
+        print("\n" + "="*60)
+        print("🔧 TRAINING CONFIGURATION")
+        print("="*60)
+        print(f"  Experiment: {config_data['training_config']['experiment_name']}")
+        print(f"  Device: {config_data['training_config']['device']}")
+        print(f"  Epochs: {config_data['training_config']['epochs']}")
+        print(f"  Optimizer: {config_data['optimizer']['type']}")
+        print(f"  Loss Type: {config_data['training_config']['loss_type']}")
+        print(f"  Use EMA: {config_data['training_config']['use_ema']}")
+        print(f"  Freeze DFL: {config_data['training_config']['freeze_dfl']}")
+        print(f"  Train Dataset: {config_data['dataloaders']['train']['dataset_size']} samples")
+        print(f"  Val Dataset: {config_data['dataloaders']['val']['dataset_size']} samples")
+        print(f"  Test Dataset: {config_data['dataloaders']['test']['dataset_size']} samples")
+        print(f"  Model Params: {config_data['model']['trainable_params']:,} trainable / {config_data['model']['total_params']:,} total")
+        if 'original_config' in config_data:
+            print("\n  Original Config Parameters:")
+            for key, value in config_data['original_config'].items():
+                if key not in ['train_data_path', 'val_data_path', 'test_data_path', 'model']:
+                    print(f"    {key}: {value}")
+        print("="*60 + "\n")
     
     def _visualize_batch(self, images, batch_dict, predictions=None, epoch=0, is_train=True, max_imgs=4):
         """
@@ -570,7 +692,10 @@ class JägerBombTrainer:
         self.cfg.model.to(self.cfg.device)
         best_loss = np.inf
         count = 0
-        early_stoppage_count = 15
+        early_stoppage_count = 9999999999
+        
+        # Log all configuration parameters at the start of training
+        self._log_config_params()
         
         # Warmup settings (like Ultralytics)
         warmup_epochs = 3.0
@@ -602,8 +727,8 @@ class JägerBombTrainer:
                 X, y = X.to(self.cfg.device), y.to(self.cfg.device) 
                 batch = self._prepare_batch_dict(X, y)
                 
-                # Save first training batch for visualization (every 10 epochs)
-                if batch_idx == 0 and (epoch % 10 == 0 or epoch == 0) and not first_batch_saved:
+                # Save first training batch for visualization (only at epoch 0)
+                if batch_idx == 0 and epoch == 0 and not first_batch_saved:
                     self._visualize_batch(X, batch, predictions=None, 
                                         epoch=epoch, is_train=True, max_imgs=4)
                     first_batch_saved = True
@@ -665,7 +790,7 @@ class JägerBombTrainer:
             val_losses = self._validate(epoch)
             
             # Compute detection metrics and generate plots every N epochs or at end
-            generate_plots = (epoch % 10 == 0) or (epoch == self.cfg.epochs - 1)
+            generate_plots = (epoch == self.cfg.epochs - 1)
             
             # Generate prediction visualizations every 10 epochs
             if generate_plots:

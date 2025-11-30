@@ -1,0 +1,66 @@
+================================================================================
+PHASE 1B: OPTIMIZER SELECTION - ANALYSIS REPORT
+================================================================================
+
+🏆 RECOMMENDED CONFIGURATION: Not Frozen (avg n=3)
+
+JUSTIFICATION:
+  • Validation mAP@0.5:0.95: 0.9812 (Rank #1)
+  • Test mAP@0.5: 0.9950 (Rank #2)
+  • Train-Val Gap: 20.45% (Rank #1)
+  • Val-Test Gap: 0.00% (Rank #2)
+  • Convergence: Epoch 4 (Rank #2)
+  • Stability: 0.0069 std (Rank #3)
+  • Total Score: 17.50 (Lower is better)
+
+================================================================================
+COMPLETE RANKINGS
+================================================================================
+
+🥇 Not Frozen (avg n=3)
+   Val mAP@0.5:0.95: 0.9812
+   Test mAP@0.5: 0.9950
+   Train-Val Gap: 20.45%
+   Convergence: Epoch 4
+   Total Score: 17.50
+
+🥈 Frozen Half (avg n=3)
+   Val mAP@0.5:0.95: 0.9787
+   Test mAP@0.5: 0.9950
+   Train-Val Gap: 21.89%
+   Convergence: Epoch 4
+   Total Score: 20.50
+
+🥉 Fully Frozen (avg n=3)
+   Val mAP@0.5:0.95: 0.9782
+   Test mAP@0.5: 0.9950
+   Train-Val Gap: 23.07%
+   Convergence: Epoch 3
+   Total Score: 25.00
+
+================================================================================
+KEY INSIGHTS
+================================================================================
+
+⚠️  3 experiment(s) show high train-val gap (>15%):
+   • Not Frozen (avg n=3): 20.45%
+   • Frozen Half (avg n=3): 21.89%
+   • Fully Frozen (avg n=3): 23.07%
+
+📊 Average convergence: Epoch 3.7
+⚡ Fastest convergence: Fully Frozen (avg n=3) (Epoch 3)
+
+🎯 Average val-test gap: 0.00%
+🏅 Best generalization: Not Frozen (avg n=3) (0.00% gap)
+
+================================================================================
+RECOMMENDATION FOR SUBSEQUENT PHASES
+================================================================================
+
+Use 'Not Frozen (avg n=3)' configuration for:
+  • Phase 1B: Transfer Learning Strategy
+  • Phase 2: Augmentation Validation
+  • Phase 3: Data Efficiency
+  • Phase 4: Spatial Consistency Loss
+
+================================================================================

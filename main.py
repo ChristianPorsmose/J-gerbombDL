@@ -1,6 +1,5 @@
 import yaml
 import torch
-from torch.optim import Adam, SGD
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
 from ultralytics.models import YOLO
@@ -34,10 +33,196 @@ class YOLOCompose:
                     img = T.functional.hflip(img)
                     # Flip bbox x-coordinates: x_center_new = 1 - x_center_old
                     bboxes[:, 1] = 1.0 - bboxes[:, 1]  # flip x_center (column 1)
+            elif isinstance(t, T.RandomVerticalFlip) and bboxes is not None and len(bboxes) > 0:
+                # Apply vertical flip to both image and bboxes
+                if torch.rand(1) < t.p:
+                    img = T.functional.vflip(img)
+                    # Flip bbox y-coordinates: y_center_new = 1 - y_center_old
+                    bboxes[:, 2] = 1.0 - bboxes[:, 2]  # flip y_center (column 2)
+            elif isinstance(t, T.RandomPerspective) and bboxes is not None and len(bboxes) > 0:
+                # Apply perspective transform to both image and bboxes
+                img, bboxes = self._apply_perspective_with_bboxes(img, bboxes, t)
+            elif isinstance(t, T.RandomRotation) and bboxes is not None and len(bboxes) > 0:
+                # Apply rotation to both image and bboxes
+                img, bboxes = self._apply_rotation_with_bboxes(img, bboxes, t)
             else:
-                # Regular transforms that only affect the image
+                # Regular transforms that only affect the image (color jitter, normalization, etc.)
                 img = t(img)
         return img, bboxes
+    
+    def _apply_perspective_with_bboxes(self, img, bboxes, transform):
+        """Apply perspective transform to image and transform bboxes accordingly."""
+        import torchvision.transforms.functional as TF
+        
+        # Get image dimensions
+        _, h, w = img.shape
+        
+        # Get perspective parameters
+        if torch.rand(1) < transform.p:
+            startpoints, endpoints = transform.get_params(w, h, transform.distortion_scale)
+            
+            # Apply perspective to image
+            img = TF.perspective(img, startpoints, endpoints, transform.interpolation, transform.fill)
+            
+            # Convert normalized YOLO bboxes to pixel corners
+            bboxes_corners = self._yolo_to_corners(bboxes, w, h)  # [N, 4] with [x1, y1, x2, y2]
+            
+            # Get all 4 corners of each box
+            x1, y1, x2, y2 = bboxes_corners[:, 0], bboxes_corners[:, 1], bboxes_corners[:, 2], bboxes_corners[:, 3]
+            corners = torch.stack([
+                torch.stack([x1, y1], dim=1),  # top-left
+                torch.stack([x2, y1], dim=1),  # top-right
+                torch.stack([x1, y2], dim=1),  # bottom-left
+                torch.stack([x2, y2], dim=1),  # bottom-right
+            ], dim=1)  # [N, 4, 2]
+            
+            # Apply perspective transform to corners
+            device = bboxes.device
+            corners_transformed = self._transform_corners_perspective(corners, startpoints, endpoints, w, h)
+            corners_transformed = corners_transformed.to(device)  # Ensure same device as input
+            
+            # Get new bounding boxes from transformed corners (axis-aligned)
+            x_coords = corners_transformed[:, :, 0]  # [N, 4]
+            y_coords = corners_transformed[:, :, 1]  # [N, 4]
+            new_x1 = x_coords.min(dim=1)[0]
+            new_y1 = y_coords.min(dim=1)[0]
+            new_x2 = x_coords.max(dim=1)[0]
+            new_y2 = y_coords.max(dim=1)[0]
+            
+            # Convert back to normalized YOLO format
+            bboxes = self._corners_to_yolo(new_x1, new_y1, new_x2, new_y2, w, h, bboxes[:, 0])
+        
+        return img, bboxes
+    
+    def _apply_rotation_with_bboxes(self, img, bboxes, transform):
+        """Apply rotation to image and transform bboxes accordingly."""
+        import torchvision.transforms.functional as TF
+        
+        # Get image dimensions
+        _, h, w = img.shape
+        
+        # Get rotation angle
+        angle = transform.get_params(transform.degrees)
+        
+        # Determine rotation center
+        if transform.center is None:
+            center = [w / 2, h / 2]
+        else:
+            center = transform.center
+        
+        # Apply rotation to image
+        img = TF.rotate(img, angle, transform.interpolation, transform.expand, center, transform.fill)
+        
+        # Convert normalized YOLO bboxes to pixel corners
+        bboxes_corners = self._yolo_to_corners(bboxes, w, h)
+        
+        # Get all 4 corners of each box
+        x1, y1, x2, y2 = bboxes_corners[:, 0], bboxes_corners[:, 1], bboxes_corners[:, 2], bboxes_corners[:, 3]
+        corners = torch.stack([
+            torch.stack([x1, y1], dim=1),  # top-left
+            torch.stack([x2, y1], dim=1),  # top-right
+            torch.stack([x1, y2], dim=1),  # bottom-left
+            torch.stack([x2, y2], dim=1),  # bottom-right
+        ], dim=1)  # [N, 4, 2]
+        
+        # Apply rotation to corners
+        device = bboxes.device
+        corners_transformed = self._transform_corners_rotation(corners, angle, center[0], center[1])
+        corners_transformed = corners_transformed.to(device)  # Ensure same device as input
+        
+        # Get new bounding boxes from transformed corners (axis-aligned)
+        x_coords = corners_transformed[:, :, 0]
+        y_coords = corners_transformed[:, :, 1]
+        new_x1 = x_coords.min(dim=1)[0]
+        new_y1 = y_coords.min(dim=1)[0]
+        new_x2 = x_coords.max(dim=1)[0]
+        new_y2 = y_coords.max(dim=1)[0]
+        
+        # Convert back to normalized YOLO format
+        bboxes = self._corners_to_yolo(new_x1, new_y1, new_x2, new_y2, w, h, bboxes[:, 0])
+        
+        return img, bboxes
+    
+    @staticmethod
+    def _yolo_to_corners(bboxes, img_w, img_h):
+        """Convert YOLO format [class, cx, cy, w, h] (normalized) to corners [x1, y1, x2, y2] (pixels)."""
+        cx = bboxes[:, 1] * img_w
+        cy = bboxes[:, 2] * img_h
+        w = bboxes[:, 3] * img_w
+        h = bboxes[:, 4] * img_h
+        
+        x1 = cx - w / 2
+        y1 = cy - h / 2
+        x2 = cx + w / 2
+        y2 = cy + h / 2
+        
+        return torch.stack([x1, y1, x2, y2], dim=1)
+    
+    @staticmethod
+    def _corners_to_yolo(x1, y1, x2, y2, img_w, img_h, classes):
+        """Convert corners [x1, y1, x2, y2] (pixels) back to YOLO format [class, cx, cy, w, h] (normalized)."""
+        cx = ((x1 + x2) / 2) / img_w
+        cy = ((y1 + y2) / 2) / img_h
+        w = (x2 - x1) / img_w
+        h = (y2 - y1) / img_h
+        
+        # Clamp to valid range [0, 1]
+        cx = torch.clamp(cx, 0, 1)
+        cy = torch.clamp(cy, 0, 1)
+        w = torch.clamp(w, 0, 1)
+        h = torch.clamp(h, 0, 1)
+        
+        return torch.stack([classes, cx, cy, w, h], dim=1)
+    
+    @staticmethod
+    def _transform_corners_perspective(corners, startpoints, endpoints, w, h):
+        """Transform corners using perspective transformation matrix."""
+        # Compute perspective transformation matrix
+        import numpy as np
+        import cv2
+        
+        # Convert to numpy for cv2
+        startpoints_np = np.float32(startpoints)
+        endpoints_np = np.float32(endpoints)
+        matrix = cv2.getPerspectiveTransform(startpoints_np, endpoints_np)
+        
+        # Transform all corners
+        N = corners.shape[0]
+        corners_flat = corners.reshape(-1, 2).cpu().numpy()  # [N*4, 2]
+        
+        # Apply perspective transform
+        corners_homogeneous = np.hstack([corners_flat, np.ones((corners_flat.shape[0], 1))])  # [N*4, 3]
+        transformed = (matrix @ corners_homogeneous.T).T  # [N*4, 3]
+        transformed = transformed[:, :2] / transformed[:, 2:3]  # Normalize by w coordinate
+        
+        # Convert back to torch and reshape
+        corners_transformed = torch.from_numpy(transformed).float().reshape(N, 4, 2)
+        
+        return corners_transformed
+    
+    @staticmethod
+    def _transform_corners_rotation(corners, angle, cx, cy):
+        """Transform corners using rotation around specified center point."""
+        import math
+        
+        # Convert angle to radians (NOTE: torchvision uses counter-clockwise, which is standard)
+        angle_rad = math.radians(-angle)  # Negate because we need to match torchvision's convention
+        cos_a = math.cos(angle_rad)
+        sin_a = math.sin(angle_rad)
+        
+        # Translate corners to origin (center of rotation), rotate, translate back
+        corners_centered = corners.clone()
+        corners_centered[:, :, 0] -= cx
+        corners_centered[:, :, 1] -= cy
+        
+        # Apply rotation matrix
+        # Standard 2D rotation: [cos -sin; sin cos]
+        x_rot = corners_centered[:, :, 0] * cos_a - corners_centered[:, :, 1] * sin_a
+        y_rot = corners_centered[:, :, 0] * sin_a + corners_centered[:, :, 1] * cos_a
+        
+        corners_rotated = torch.stack([x_rot + cx, y_rot + cy], dim=2)
+        
+        return corners_rotated
 
 class LetterBoxTransform:
     def __init__(self, new_shape=(640, 640), color=(114, 114, 114)):
@@ -138,20 +323,32 @@ def unfreeze_all_layers(torch_model):
     print("✅ All model layers unfrozen and ready for training")
 
 
-def freeze_backbone_layers(torch_model):
+def freeze_backbone_layers(torch_model, backbone_to_freeze):
     """Freeze the backbone layers of the model (first N layers before detection head)."""
     frozen_count = 0
-    # Freeze all layers in model.model (backbone)
 
-    #Do not freeze any layer from the detection head (from model.11 onwards)
+    if backbone_to_freeze is None:
+        #THrow an error
+        print("No backbone_to_freeze specified, skipping freezing backbone layers.")
+        return
+    # Cap freezing to layer indices 0..10 so model.11+ are never frozen (detection head)
+    if backbone_to_freeze >= 0:
+        max_to_freeze = min(int(backbone_to_freeze), 10)
 
     for name, param in torch_model.named_parameters():
-        # Freeze everything except the detection head (last layers)
-        if not any(x in name for x in ['model.11', 'model.12', 'model.13', 'model.14', 'model.15', 'model.16', 'model.17', 'model.18', 'model.19', 'model.20', 'model.21', 'model.22', 'model.23']):
-            param.requires_grad = False
-            #print("Froze model layer:", name)
-            frozen_count += 1
-    print(f"✅ Froze {frozen_count} backbone parameters (keeping detection head trainable)")
+        # Expect names like "model.0.conv.weight" -> extract the index after "model."
+        if name.startswith("model."):
+            rest = name[len("model."):]
+            idx_str = rest.split('.', 1)[0]
+            try:
+                idx = int(idx_str)
+            except ValueError:
+                continue
+            if 0 <= idx <= max_to_freeze:
+                param.requires_grad = False
+                frozen_count += 1
+
+    print(f"✅ Froze {frozen_count} backbone parameters (model.0..model.{max_to_freeze})")
 
 
 def freeze_dfl_conv_weights(torch_model):
@@ -205,8 +402,9 @@ if __name__ == "__main__":
     unfreeze_all_layers(torch_model)
     
     # Freeze backbone if requested in config
-    if params.get("freeze_backbone", False):
-        freeze_backbone_layers(torch_model)
+    layers_to_freeze = params.get("freeze_backbone_layers", None)
+    print(f"Layers to freeze in backbone: {layers_to_freeze}")
+    freeze_backbone_layers(torch_model, layers_to_freeze)
     
     # Freeze DFL weights if requested in config
     if params.get("freeze_dfl", False):
@@ -229,39 +427,64 @@ if __name__ == "__main__":
             else:  # regular weights (with decay)
                 g[0].append(param)
     
-    # Use AdamW with proper weight decay setup
+    # Setup optimizer based on config
+    optimizer_type = params.get("optimizer", "AdamW")
     lr = params.get("lr", 0.001667)
-    momentum = 0.9
     weight_decay = params.get("weight_decay", 0.0005625)
-    optimizer = torch.optim.AdamW(g[2], lr=lr, betas=(momentum, 0.999), weight_decay=0.0)
-    optimizer.add_param_group({"params": g[0], "weight_decay": weight_decay})  # weights with decay
-    optimizer.add_param_group({"params": g[1], "weight_decay": 0.0})  # batch norm without decay
     
-    print(f"optimizer: AdamW(lr={lr}, momentum={momentum}) with parameter groups {len(g[1])} weight(decay=0.0), {len(g[0])} weight(decay={weight_decay}), {len(g[2])} bias(decay=0.0)")
-
+    if optimizer_type == "SGD":
+        momentum = params.get("momentum", 0.0)  # Default to 0 for vanilla SGD
+        use_nesterov = momentum > 0  # Only use Nesterov if momentum is specified
+        optimizer = torch.optim.SGD(g[2], lr=lr, momentum=momentum, nesterov=use_nesterov, weight_decay=0.0)
+        optimizer.add_param_group({"params": g[0], "weight_decay": weight_decay})  # weights with decay
+        optimizer.add_param_group({"params": g[1], "weight_decay": 0.0})  # batch norm without decay
+        if momentum > 0:
+            print(f"optimizer: SGD(lr={lr}, momentum={momentum}, nesterov={use_nesterov}) with {len(g[1])} weight(decay=0.0), {len(g[0])} weight(decay={weight_decay}), {len(g[2])} bias(decay=0.0)")
+        else:
+            print(f"optimizer: SGD(lr={lr}) with {len(g[1])} weight(decay=0.0), {len(g[0])} weight(decay={weight_decay}), {len(g[2])} bias(decay=0.0)")
+    elif optimizer_type == "AdamW":
+        momentum = params.get("momentum", 0.9)
+        optimizer = torch.optim.AdamW(g[2], lr=lr, betas=(momentum, 0.999), weight_decay=0.0)
+        optimizer.add_param_group({"params": g[0], "weight_decay": weight_decay})  # weights with decay
+        optimizer.add_param_group({"params": g[1], "weight_decay": 0.0})  # batch norm without decay
+        print(f"optimizer: AdamW(lr={lr}, betas=({momentum}, 0.999)) with {len(g[1])} weight(decay=0.0), {len(g[0])} weight(decay={weight_decay}), {len(g[2])} bias(decay=0.0)")
+    else:
+        raise ValueError(f"Unsupported optimizer type: {optimizer_type}")
     # TRAINING transforms - augmentation mode based on config
     augmentation_mode = params.get("augmentation", "full")
     
     if augmentation_mode == "none":
-        # No augmentation - resize only
+        # No augmentation except letterbox
         train_transform_list = [
             LetterBoxTransform(new_shape=(640, 640)),
             T.ToDtype(torch.float32, scale=True)
         ]
     elif augmentation_mode == "geometric":
-        # Geometric augmentations only (generic)
+        # Geometric augmentations only (flips, perspective, rotation)
         train_transform_list = [
             LetterBoxTransform(new_shape=(640, 640)),
             T.RandomHorizontalFlip(p=0.5),
+            T.RandomVerticalFlip(p=0.5),
+            T.RandomPerspective(distortion_scale=0.2, p=0.5, fill=114),
+            T.RandomRotation(degrees=(-15, 15), expand=False, fill=114),
+            T.ToDtype(torch.float32, scale=True)
+        ]
+    elif augmentation_mode == "light":
+        # Light-related augmentations only
+        train_transform_list = [
+            LetterBoxTransform(new_shape=(640, 640)),
+            T.ColorJitter(brightness=0.5, saturation=0.4, hue=0.3),
+
             T.ToDtype(torch.float32, scale=True)
         ]
     else:  # "full" - custom augmentations for disco/club environment
         train_transform_list = [
             LetterBoxTransform(new_shape=(640, 640)),
             T.RandomHorizontalFlip(p=0.5),
-            T.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.05),
-            T.RandomGrayscale(p=0.1),
-            T.GaussianBlur(kernel_size=5, sigma=(0.1, 2.0)),
+            T.RandomVerticalFlip(p=0.5),
+            T.RandomPerspective(distortion_scale=0.2, p=0.5,fill=114),
+            T.RandomRotation(degrees=(-15, 15), expand=False, fill=114),
+            T.ColorJitter(brightness=0.5, saturation=0.4, hue=0.3),
             T.ToDtype(torch.float32, scale=True)
         ]
     
@@ -275,18 +498,25 @@ if __name__ == "__main__":
     ])
 
     # Handle dataset size limiting (for Phase 3 experiments)
+    # IMPORTANT: Creates NESTED subsets - smaller sizes are subsets of larger sizes
     train_data_path = params["train_data_path"]
     if "dataset_size" in params and params["dataset_size"] is not None:
         # Read all training image paths
         with open(train_data_path, 'r') as f:
             all_train_paths = [line.strip() for line in f.readlines()]
         
-        desired_size = params["dataset_size"]
+        desired_size = int(params["dataset_size"]*len(all_train_paths))
+        
         if desired_size < len(all_train_paths):
-            # Randomly sample a subset (with shuffle for unbiased selection)
+            # Create NESTED subset: shuffle once with fixed seed, then take first N
+            # This ensures dataset_size=20 ⊂ dataset_size=40 ⊂ dataset_size=60, etc.
             import random
-            random.seed(42)  # Fixed seed for reproducibility
-            sampled_paths = random.sample(all_train_paths, desired_size)
+            random.seed(42)  # Fixed seed for reproducibility across all experiments
+            all_train_paths_shuffled = all_train_paths.copy()
+            random.shuffle(all_train_paths_shuffled)
+            
+            # Take first N paths (ensures nesting property)
+            sampled_paths = all_train_paths_shuffled[:desired_size]
             
             # Create temporary file with sampled paths
             import tempfile
@@ -296,7 +526,7 @@ if __name__ == "__main__":
             temp_file.close()
             train_data_path = temp_file.name
             
-            print(f"📊 Dataset size limiting: Using {desired_size}/{len(all_train_paths)} training images")
+            print(f"📊 Dataset size limiting: Using {desired_size}/{len(all_train_paths)} training images (NESTED subset)")
         else:
             print(f"📊 Dataset size: Using all {len(all_train_paths)} training images")
 
@@ -373,7 +603,8 @@ if __name__ == "__main__":
         use_ema=params.get("use_ema", False),
         freeze_dfl=params.get("freeze_dfl", False),
         experiment_name=experiment_name,
-        loss_type=loss_type
+        loss_type=loss_type,
+        config_params=params
     )
     
     save_cfg = SaveConfig(

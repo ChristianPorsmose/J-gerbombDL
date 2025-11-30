@@ -1,0 +1,4 @@
+Experiment,Val_mAP@0.5,Val_mAP@0.5:0.95,Precision,Recall,Test_mAP@0.5,Val-Test_Gap_%,Train-Val_Gap_%,Gap_Std_%,Convergence_Epoch,Stability_Std,Rank_mAP50-95,Rank_Test_mAP,Rank_Train-Val_Gap,Rank_Val-Test_Gap,Rank_Convergence,Rank_Stability,Total_Score
+Not Frozen (avg n=3),0.9950,0.9812,0.9997,0.9971,0.9950,0.0000,20.4484,14.2507,4,0.0069,1.0000,2.0000,1.0000,2.0000,2.5000,3.0000,17.5000
+Frozen Half (avg n=3),0.9950,0.9787,0.9997,0.9971,0.9950,0.0000,21.8897,14.7339,4,0.0060,2.0000,2.0000,2.0000,2.0000,2.5000,1.0000,20.5000
+Fully Frozen (avg n=3),0.9950,0.9782,0.9996,0.9971,0.9950,0.0000,23.0695,11.8677,3,0.0061,3.0000,2.0000,3.0000,2.0000,1.0000,2.0000,25.0000

@@ -39,9 +39,8 @@ PHASE1A_SGD_STANDARD = {
     "optimizer": "SGD",
     "lr": 0.01,
     "lr_scheduler": "fixed",  # "fixed" or "cosine"
-    "momentum": 0.937,
     "weight_decay": 0.0005,
-    "freeze_backbone": False,
+    "freeze_backbone_layers": 0,
     "freeze_dfl": False,
     "use_ema": False,
     "augmentation": "none",
@@ -61,9 +60,8 @@ PHASE1A_SGD_CONSERVATIVE = {
     "optimizer": "SGD",
     "lr": 0.001,  # 10x lower
     "lr_scheduler": "fixed",  # "fixed" or "cosine"
-    "momentum": 0.937,
     "weight_decay": 0.001,  # 2x higher for regularization
-    "freeze_backbone": False,
+    "freeze_backbone_layers": 0,
     "freeze_dfl": False,
     "use_ema": False,
     "augmentation": "none",
@@ -84,7 +82,7 @@ PHASE1A_ADAMW_STANDARD = {
     "lr": 0.001,
     "lr_scheduler": "fixed",  # "fixed" or "cosine"
     "weight_decay": 0.0005,
-    "freeze_backbone": False,
+    "freeze_backbone_layers": 0,
     "freeze_dfl": False,
     "use_ema": False,
     "augmentation": "none",
@@ -105,7 +103,7 @@ PHASE1A_ADAMW_CONSERVATIVE = {
     "lr": 0.0001,  # 10x lower
     "lr_scheduler": "fixed",  # "fixed" or "cosine"
     "weight_decay": 0.001,  # 2x higher for regularization
-    "freeze_backbone": False,
+    "freeze_backbone_layers": 0,
     "freeze_dfl": False,
     "use_ema": False,
     "augmentation": "none",
@@ -126,7 +124,7 @@ PHASE1A_ADAMW_AGGRESSIVE = {
     "lr": 0.003,  # 3x higher
     "lr_scheduler": "fixed",  # "fixed" or "cosine"
     "weight_decay": 0.0003,  # Lower decay for faster learning
-    "freeze_backbone": False,
+    "freeze_backbone_layers": 0,
     "freeze_dfl": False,
     "use_ema": False,
     "augmentation": "none",
@@ -138,17 +136,69 @@ PHASE1A_ADAMW_AGGRESSIVE = {
 # Fixed: BEST optimizer from Phase 1A, full augmentation, all data
 # Analysis: Compare mAP, train-val gap (overfitting), convergence speed
 
-PHASE1B_FROZEN_STANDARD = {
-    # TODO: Copy the BEST optimizer config from Phase 1A here
-    # Then modify:
-    "freeze_backbone": True,
-    # Keep the winning LR from Phase 1A
+PHASE1B_NOT_FROZEN = {
+    #ADAMW_STANDARD is winner
+    "experiment_name": "phase1b_not_frozen",
+    "model": "custom_yolo.yaml",
+    "train_data_path": "/home/dl01e25/dataset_final_boxes_yolo/train.txt",
+    "val_data_path": "/home/dl01e25/dataset_final_boxes_yolo/val.txt",
+    "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
+    "batch_size": 8,
+    "epochs": 100,
+    "log_interval": 10,
+    "save_interval": 30,
+    "save_path": "weights",
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
+    "weight_decay": 0.0005,
+    "freeze_dfl": False,
+    "use_ema": False,
+    "freeze_backbone_layers": 0,
+    "augmentation": "none",    # Keep the winning LR from Phase 1A
 }
 
-PHASE1B_FROZEN_LOWER_LR = {
-    # TODO: Copy the BEST optimizer config from Phase 1A here
-    # Then modify:
-    "freeze_backbone": True,
+PHASE1B_FULLY_FROZEN = {
+    "experiment_name": "phase1b_fully_frozen",
+    "model": "custom_yolo.yaml",
+    "train_data_path": "/home/dl01e25/dataset_final_boxes_yolo/train.txt",
+    "val_data_path": "/home/dl01e25/dataset_final_boxes_yolo/val.txt",
+    "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
+    "batch_size": 8,
+    "epochs": 100,
+    "log_interval": 10,
+    "save_interval": 30,
+    "save_path": "weights",
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
+    "weight_decay": 0.0005,
+    "freeze_dfl": False,
+    "use_ema": False,
+    "augmentation": "none",    # Keep the winning LR from Phase 1A
+    "freeze_backbone_layers": 10,
+    # "lr": <divide Phase 1A winner LR by 3>
+}
+
+PHASE1B_FROZEN_HALF = {
+    "experiment_name": "phase1b_frozen_half",
+    "model": "custom_yolo.yaml",
+    "train_data_path": "/home/dl01e25/dataset_final_boxes_yolo/train.txt",
+    "val_data_path": "/home/dl01e25/dataset_final_boxes_yolo/val.txt",
+    "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
+    "batch_size": 8,
+    "epochs": 100,
+    "log_interval": 10,
+    "save_interval": 30,
+    "save_path": "weights",
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "lr_scheduler": "fixed",  # "fixed" or "cosine"
+    "weight_decay": 0.0005,
+    "freeze_dfl": False,
+    "use_ema": False,
+    "augmentation": "none",    # Keep the winning LR from Phase 1A
+    "freeze_backbone_layers": 5,
     # "lr": <divide Phase 1A winner LR by 3>
 }
 
@@ -158,58 +208,57 @@ PHASE1B_FROZEN_LOWER_LR = {
 # Fixed: BEST config from Phase 1, full dataset
 # Analysis: Compare mAP, per-class metrics, failure cases
 
-PHASE2_NO_AUGMENTATION = {
-    # TODO: Copy BEST config from Phase 1
+PHASE2_NO_AUGMENTATION_20_IMAGES = {
+    "experiment_name": "phase2_no_augmentation_20_images",
     "augmentation": "none",  # Resize only
 }
 
-PHASE2_GENERIC_AUGMENTATION = {
-    # TODO: Copy BEST config from Phase 1
-    "augmentation": "geometric",  # Flip + Rotate (standard CV)
+PHASE2_NO_AUGMENTATION_40_IMAGES = {
+    "experiment_name": "phase2_no_augmentation_40_images",
+    "augmentation": "none",  # Resize only
+}
+
+PHASE2_NO_AUGMENTATION_80_IMAGES = {
+    "experiment_name": "phase2_no_augmentation_80_images",
+    "augmentation": "none",  # Resize only
+}
+
+PHASE2_NO_AUGMENTATION_ALL_IMAGES = {
+    "experiment_name": "phase2_no_augmentation_all_images",
+    "augmentation": "none",  # Resize only
 }
 
 #Light related aug only
-PHASE2_LIGHT_AUGMENTATION = {
-    # TODO: Copy BEST config from Phase 1
-    "augmentation": "light",  # Your custom light-related augmentation pipeline
+PHASE2_LIGHT_AUGMENTATION_20_IMAGES = {
+    "experiment_name": "phase2_light_augmentation_20_images",
+    "augmentation": "light",
+}
+PHASE2_LIGHT_AUGMENTATION_40_IMAGES = {
+    "experiment_name": "phase2_light_augmentation_40_images",
+    "augmentation": "light",  
+}
+PHASE2_LIGHT_AUGMENTATION_80_IMAGES = {
+    "experiment_name": "phase2_light_augmentation_80_images",
+    "augmentation": "light", 
+}
+PHASE2_LIGHT_AUGMENTATION_ALL_IMAGES = {
+    "experiment_name": "phase2_light_augmentation_all_images",
+    "augmentation": "light",  
 }
 
-PHASE2_DOMAIN_AUGMENTATION = {
+
+PHASE2_GEO_AUGMENTATION_20_IMAGES = {
     # TODO: Copy BEST config from Phase 1
     "augmentation": "full",  # Your custom disco/occlusion pipeline
 }
+PHASE2_GEO_AUGMENTATION_40_IMAGES = {}
+PHASE2_GEO_AUGMENTATION_80_IMAGES = {}
+PHASE2_GEO_AUGMENTATION_ALL_IMAGES = {}
 
-# ========== PHASE 3: Data Efficiency (5 runs) ==========
-# Goal: Determine minimum viable dataset size
-# Variable: Dataset size
-# Fixed: BEST config from Phase 1A+1B+2
-# Analysis: Plot mAP vs dataset size, find diminishing returns point
-
-PHASE3_50_IMAGES = {
-    # TODO: Copy BEST config from Phase 1+2
-    # Then add:
-    "dataset_size": 50,
-}
-
-PHASE3_100_IMAGES = {
-    # TODO: Copy BEST config from Phase 1+2
-    "dataset_size": 100,
-}
-
-PHASE3_150_IMAGES = {
-    # TODO: Copy BEST config from Phase 1+2
-    "dataset_size": 150,
-}
-
-PHASE3_200_IMAGES = {
-    # TODO: Copy BEST config from Phase 1+2
-    "dataset_size": 200,
-}
-
-PHASE3_231_IMAGES = {
-    # TODO: Copy BEST config from Phase 1+2
-    "dataset_size": 231,  # Full dataset
-}
+PHASE2_FULL_AUGMENTATION_20_IMAGES = {}
+PHASE2_FULL_AUGMENTATION_40_IMAGES = {}
+PHASE2_FULL_AUGMENTATION_80_IMAGES = {}
+PHASE2_FULL_AUGMENTATION_ALL_IMAGES = {}
 
 # ========== PHASE 4: Novel Contribution - Spatial Consistency Loss (2 runs) ==========
 # Goal: Validate your 10 ECTS contribution

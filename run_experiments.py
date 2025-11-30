@@ -127,11 +127,14 @@ if __name__ == "__main__":
     
     # Example: Run all Phase 1A experiments
     EXPERIMENT_QUEUE = [
-        "PHASE1A_SGD_STANDARD",
-        "PHASE1A_SGD_CONSERVATIVE",
-        "PHASE1A_ADAMW_STANDARD",
-        "PHASE1A_ADAMW_CONSERVATIVE",
-        "PHASE1A_ADAMW_AGGRESSIVE",
+        #"PHASE1A_SGD_STANDARD",
+        #"PHASE1A_SGD_CONSERVATIVE",
+        #"PHASE1A_ADAMW_STANDARD",
+        #"PHASE1A_ADAMW_CONSERVATIVE",
+        #"PHASE1A_ADAMW_AGGRESSIVE",
+        "PHASE1B_NOT_FROZEN",
+        "PHASE1B_FULLY_FROZEN",
+        "PHASE1B_FROZEN_HALF",
     ]
     
     # Or run a custom subset:
@@ -143,9 +146,14 @@ if __name__ == "__main__":
     # ==========================================================
     
     # Run the queue
-    results = run_experiment_queue(
-        config_names=EXPERIMENT_QUEUE,
-        continue_on_error=True  # Set to False to stop on first failure
+    #No of times
+    NUM_RUNS = 3
+
+    for run_idx in range(NUM_RUNS):
+        print(f"\n🔄 Starting run {run_idx + 1} of {NUM_RUNS}\n")
+        results = run_experiment_queue(
+            config_names=EXPERIMENT_QUEUE,
+            continue_on_error=True  # Set to False to stop on first failure
     )
     
     # Exit with error code if any experiments failed

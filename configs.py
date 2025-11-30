@@ -19,8 +19,9 @@ class TrainingConfig:
     yolo_model : Any
     use_ema: bool
     freeze_dfl: bool
-    experiment_name: str = None
-    loss_type: str = "standard"
+    experiment_name: str
+    loss_type: str
+    config_params: dict
 
 @dataclass
 class SaveConfig:
