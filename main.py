@@ -274,7 +274,33 @@ if __name__ == "__main__":
         T.ToDtype(torch.float32, scale=True)
     ])
 
-    train_dataset = JägerBombDataset(params["train_data_path"], transforms=train_transforms)
+    # Handle dataset size limiting (for Phase 3 experiments)
+    train_data_path = params["train_data_path"]
+    if "dataset_size" in params and params["dataset_size"] is not None:
+        # Read all training image paths
+        with open(train_data_path, 'r') as f:
+            all_train_paths = [line.strip() for line in f.readlines()]
+        
+        desired_size = params["dataset_size"]
+        if desired_size < len(all_train_paths):
+            # Randomly sample a subset (with shuffle for unbiased selection)
+            import random
+            random.seed(42)  # Fixed seed for reproducibility
+            sampled_paths = random.sample(all_train_paths, desired_size)
+            
+            # Create temporary file with sampled paths
+            import tempfile
+            temp_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt')
+            for path in sampled_paths:
+                temp_file.write(path + '\n')
+            temp_file.close()
+            train_data_path = temp_file.name
+            
+            print(f"📊 Dataset size limiting: Using {desired_size}/{len(all_train_paths)} training images")
+        else:
+            print(f"📊 Dataset size: Using all {len(all_train_paths)} training images")
+
+    train_dataset = JägerBombDataset(train_data_path, transforms=train_transforms)
     train_loader = DataLoader(
         train_dataset,
         batch_size=params["batch_size"],
@@ -286,6 +312,16 @@ if __name__ == "__main__":
     val_dataset = JägerBombDataset(params["val_data_path"], transforms=val_transforms)
     val_loader = DataLoader(
         val_dataset,
+        batch_size=params["batch_size"],
+        shuffle=False,
+        collate_fn=collate_fn,
+        generator=torch.Generator(device)
+    )
+    
+    # Test dataset (no augmentation!)
+    test_dataset = JägerBombDataset(params["test_data_path"], transforms=val_transforms)
+    test_loader = DataLoader(
+        test_dataset,
         batch_size=params["batch_size"],
         shuffle=False,
         collate_fn=collate_fn,
@@ -328,6 +364,7 @@ if __name__ == "__main__":
         scheduler=scheduler,
         train_dataloader=train_loader,
         val_dataloader=val_loader,
+        test_dataloader=test_loader,
         loss_fn=loss_fn,
         device=device,
         epochs=params["epochs"],

@@ -11,6 +11,7 @@ class TrainingConfig:
     scheduler: Any
     train_dataloader : DataLoader
     val_dataloader : DataLoader
+    test_dataloader : DataLoader
     loss_fn : Callable
     device : str
     epochs : int

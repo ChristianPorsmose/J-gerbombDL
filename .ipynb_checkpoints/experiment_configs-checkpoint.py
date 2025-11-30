@@ -44,7 +44,7 @@ PHASE1A_SGD_STANDARD = {
     "freeze_backbone": False,
     "freeze_dfl": False,
     "use_ema": False,
-    "augmentation": "none",
+    "augmentation": "full",
 }
 
 PHASE1A_SGD_CONSERVATIVE = {
@@ -66,7 +66,7 @@ PHASE1A_SGD_CONSERVATIVE = {
     "freeze_backbone": False,
     "freeze_dfl": False,
     "use_ema": False,
-    "augmentation": "none",
+    "augmentation": "full",
 }
 
 PHASE1A_ADAMW_STANDARD = {
@@ -87,7 +87,7 @@ PHASE1A_ADAMW_STANDARD = {
     "freeze_backbone": False,
     "freeze_dfl": False,
     "use_ema": False,
-    "augmentation": "none",
+    "augmentation": "full",
 }
 
 PHASE1A_ADAMW_CONSERVATIVE = {
@@ -108,7 +108,7 @@ PHASE1A_ADAMW_CONSERVATIVE = {
     "freeze_backbone": False,
     "freeze_dfl": False,
     "use_ema": False,
-    "augmentation": "none",
+    "augmentation": "full",
 }
 
 PHASE1A_ADAMW_AGGRESSIVE = {
@@ -129,7 +129,7 @@ PHASE1A_ADAMW_AGGRESSIVE = {
     "freeze_backbone": False,
     "freeze_dfl": False,
     "use_ema": False,
-    "augmentation": "none",
+    "augmentation": "full",
 }
 
 # ========== PHASE 1B: Transfer Learning Strategy (2-3 runs) ==========
@@ -152,79 +152,73 @@ PHASE1B_FROZEN_LOWER_LR = {
     # "lr": <divide Phase 1A winner LR by 3>
 }
 
-# ========== PHASE 2: Augmentation Validation (3 runs) ==========
+# ========== PHASE 2: Data Efficiency (5 runs) ==========
+# Goal: Determine minimum viable dataset size
+# Variable: Dataset size
+# Fixed: BEST config from Phase 1A+1B
+# Analysis: Plot mAP vs dataset size, find diminishing returns point
+
+PHASE2_50_IMAGES = {
+    # TODO: Copy BEST config from Phase 1
+    # Then add:
+    "dataset_size": 50,
+}
+
+PHASE2_100_IMAGES = {
+    # TODO: Copy BEST config from Phase 1
+    "dataset_size": 100,
+}
+
+PHASE2_150_IMAGES = {
+    # TODO: Copy BEST config from Phase 1
+    "dataset_size": 150,
+}
+
+PHASE2_200_IMAGES = {
+    # TODO: Copy BEST config from Phase 1
+    "dataset_size": 200,
+}
+
+PHASE2_231_IMAGES = {
+    # TODO: Copy BEST config from Phase 1
+    "dataset_size": 231,  # Full dataset
+}
+
+# ========== PHASE 3: Augmentation Validation (3 runs) ==========
 # Goal: Prove domain-specific augmentations help
 # Variable: Augmentation strategy
 # Fixed: BEST config from Phase 1, full dataset
 # Analysis: Compare mAP, per-class metrics, failure cases
 
-PHASE2_NO_AUGMENTATION = {
+PHASE3_NO_AUGMENTATION = {
     # TODO: Copy BEST config from Phase 1
     "augmentation": "none",  # Resize only
 }
 
-PHASE2_GENERIC_AUGMENTATION = {
+PHASE3_GENERIC_AUGMENTATION = {
     # TODO: Copy BEST config from Phase 1
     "augmentation": "geometric",  # Flip + Rotate (standard CV)
 }
 
-#Light related aug only
-PHASE2_LIGHT_AUGMENTATION = {
-    # TODO: Copy BEST config from Phase 1
-    "augmentation": "light",  # Your custom light-related augmentation pipeline
-}
-
-PHASE2_DOMAIN_AUGMENTATION = {
+PHASE3_DOMAIN_AUGMENTATION = {
     # TODO: Copy BEST config from Phase 1
     "augmentation": "full",  # Your custom disco/occlusion pipeline
-}
-
-# ========== PHASE 3: Data Efficiency (5 runs) ==========
-# Goal: Determine minimum viable dataset size
-# Variable: Dataset size
-# Fixed: BEST config from Phase 1A+1B+2
-# Analysis: Plot mAP vs dataset size, find diminishing returns point
-
-PHASE3_50_IMAGES = {
-    # TODO: Copy BEST config from Phase 1+2
-    # Then add:
-    "dataset_size": 50,
-}
-
-PHASE3_100_IMAGES = {
-    # TODO: Copy BEST config from Phase 1+2
-    "dataset_size": 100,
-}
-
-PHASE3_150_IMAGES = {
-    # TODO: Copy BEST config from Phase 1+2
-    "dataset_size": 150,
-}
-
-PHASE3_200_IMAGES = {
-    # TODO: Copy BEST config from Phase 1+2
-    "dataset_size": 200,
-}
-
-PHASE3_231_IMAGES = {
-    # TODO: Copy BEST config from Phase 1+2
-    "dataset_size": 231,  # Full dataset
 }
 
 # ========== PHASE 4: Novel Contribution - Spatial Consistency Loss (2 runs) ==========
 # Goal: Validate your 10 ECTS contribution
 # Variable: Loss function
-# Fixed: BEST config from Phases 1-2-3 (best optimizer, augmentation, full dataset)
+# Fixed: BEST config from Phases 1-3
 # Analysis: Confusion matrix, "floating shots" count, spatial coupling metrics
 
 PHASE4_STANDARD_LOSS = {
-    # TODO: Copy BEST config from Phase 1-2-3
+    # TODO: Copy BEST config from Phase 1-3
     "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
     "loss_type": "standard",  # YOLO loss (baseline)
 }
 
 PHASE4_SPATIAL_LOSS = {
-    # TODO: Copy BEST config from Phase 1-2-3
+    # TODO: Copy BEST config from Phase 1-3
     "test_data_path": "/home/dl01e25/dataset_final_boxes_yolo/test.txt",
     "loss_type": "spatial_consistency",  # Your novel loss
 }
@@ -276,7 +270,24 @@ Example insights:
 Lock in your BEST overall training config.
 
 
-PHASE 2: Augmentation
+PHASE 2: Data Efficiency
+-------------------------
+Use BEST config from Phase 1, vary dataset size.
+
+Run 5 configs with different dataset_size values.
+
+Analysis:
+- Create line plot: X-axis = dataset size, Y-axis = mAP
+- Identify the "knee" of the curve
+- Calculate marginal gains: mAP improvement per 50 images
+
+Example insights:
+- "Performance plateaus at ~150 images (mAP 0.73)"
+- "50→100 images: +15% mAP, but 150→200: only +2%"
+- "Diminishing returns suggest 150 images sufficient for production"
+
+
+PHASE 3: Augmentation
 ----------------------
 Use BEST config from Phase 1, full dataset.
 
@@ -293,31 +304,10 @@ Example insights:
 - "ColorJitter reduced false positives in disco lighting by 23%"
 - "Domain knowledge matters: simulating real-world conditions helps"
 
-Lock in your BEST augmentation strategy.
-
-
-PHASE 3: Data Efficiency
--------------------------
-Use BEST config from Phase 1+2, vary dataset size.
-
-Run 5 configs with different dataset_size values.
-
-Analysis:
-- Create line plot: X-axis = dataset size, Y-axis = mAP
-- Identify the "knee" of the curve
-- Calculate marginal gains: mAP improvement per 50 images
-
-Example insights:
-- "Performance plateaus at ~150 images (mAP 0.73)"
-- "50→100 images: +15% mAP, but 150→200: only +2%"
-- "Diminishing returns suggest 150 images sufficient for production"
-
-Note: Use winning augmentation from Phase 2 for all dataset sizes.
-
 
 PHASE 4: Novel Loss
 --------------------
-Use BEST config from Phases 1-2-3 (with full dataset).
+Use BEST config from Phases 1-3.
 
 Run 2 configs: standard vs spatial_consistency loss.
 
@@ -337,7 +327,7 @@ Example insights:
 - "Physical constraint enforcement improves logical consistency"
 
 
-TOTAL RUNS: 5 + 2 + 3 + 5 + 2 = 17 experiments
+TOTAL RUNS: 5 + 2 + 5 + 3 + 2 = 17 experiments
 Each experiment generates:
 - results.csv (all metrics)
 - results.png (training curves)
