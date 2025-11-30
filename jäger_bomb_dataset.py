@@ -64,8 +64,9 @@ class JägerBombDataset(Dataset):
         label_path = self.__get_label_path_from_image_path(image_path)
 
         if not os.path.exists(label_path):
-            print(f"Label file not found for image: {image_path}\nAt path: {label_path}")
-            self.mislabeled.append(image_path)
+            # Negative sample (background image with no objects)
+            if self.transforms:
+                image, _ = self.transforms(image, empty_labels)
             return image.to(device), empty_labels.to(device)
         
         labels = []

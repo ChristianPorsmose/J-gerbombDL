@@ -14,6 +14,7 @@ from jäger_bomb_trainer import JägerBombTrainer
 from configs import TrainingConfig, SaveConfig
 from torchvision.transforms import v2 as T
 from types import SimpleNamespace
+from ultralytics.utils.loss import v8DetectionLoss
 
 class YOLOCompose:
     """Custom compose that handles both images and bboxes."""
@@ -27,6 +28,12 @@ class YOLOCompose:
                     img, bboxes = t(img, bboxes)
                 else:
                     img = t(img)
+            elif isinstance(t, T.RandomHorizontalFlip) and bboxes is not None and len(bboxes) > 0:
+                # Apply horizontal flip to both image and bboxes
+                if torch.rand(1) < t.p:
+                    img = T.functional.hflip(img)
+                    # Flip bbox x-coordinates: x_center_new = 1 - x_center_old
+                    bboxes[:, 1] = 1.0 - bboxes[:, 1]  # flip x_center (column 1)
             else:
                 # Regular transforms that only affect the image
                 img = t(img)
@@ -121,8 +128,13 @@ def collate_fn(batch):
 
 def unfreeze_all_layers(torch_model):
     """Unfreeze all model parameters for training."""
-    for param in torch_model.parameters():
+    
+    #Print the architecture of the model
+
+
+    for name, param in torch_model.named_parameters():
         param.requires_grad = True
+        print("Unfroze model layer:", name)
     print("✅ All model layers unfrozen and ready for training")
 
 
@@ -130,11 +142,14 @@ def freeze_backbone_layers(torch_model):
     """Freeze the backbone layers of the model (first N layers before detection head)."""
     frozen_count = 0
     # Freeze all layers in model.model (backbone)
+
+    #Do not freeze any layer from the detection head (from model.11 onwards)
+
     for name, param in torch_model.named_parameters():
         # Freeze everything except the detection head (last layers)
-        # Detection head typically starts with 'model.22' or similar in YOLO11
-        if not any(x in name for x in ['model.22', 'model.23', 'cv2', 'cv3', 'dfl']):
+        if not any(x in name for x in ['model.11', 'model.12', 'model.13', 'model.14', 'model.15', 'model.16', 'model.17', 'model.18', 'model.19', 'model.20', 'model.21', 'model.22', 'model.23']):
             param.requires_grad = False
+            #print("Froze model layer:", name)
             frozen_count += 1
     print(f"✅ Froze {frozen_count} backbone parameters (keeping detection head trainable)")
 
@@ -142,6 +157,7 @@ def freeze_backbone_layers(torch_model):
 def freeze_dfl_conv_weights(torch_model):
     """Freeze the weights of dfl.conv layers in the model."""
     found = False
+
     for name, module in torch_model.named_modules():
         if name.endswith('.dfl.conv'):
             for pname, param in module.named_parameters(recurse=False):
@@ -237,7 +253,6 @@ if __name__ == "__main__":
         train_transform_list = [
             LetterBoxTransform(new_shape=(640, 640)),
             T.RandomHorizontalFlip(p=0.5),
-            T.RandomRotation(degrees=10),
             T.ToDtype(torch.float32, scale=True)
         ]
     else:  # "full" - custom augmentations for disco/club environment
@@ -298,20 +313,30 @@ if __name__ == "__main__":
     #print("Testing __getitem__")
     #print(train_dataset[3])
 
+    # Select loss function based on configuration
+    loss_type = params.get("loss_type", "standard")
+    if loss_type == "spatial_consistency":
+        loss_fn = JägerBombLoss(torch_model,lamda_rate=1)
+        print("🎯 Using spatial consistency loss (JägerBombLoss)")
+    else:
+        loss_fn = v8DetectionLoss(torch_model)
+        print("📦 Using standard YOLO loss (v8DetectionLoss)")
+    
     cfg = TrainingConfig(
         model=torch_model,
         optimizer=optimizer,
         scheduler=scheduler,
         train_dataloader=train_loader,
         val_dataloader=val_loader,
-        loss_fn=JägerBombLoss(torch_model),
+        loss_fn=loss_fn,
         device=device,
         epochs=params["epochs"],
         log_interval=params["log_interval"],
         yolo_model=model,
         use_ema=params.get("use_ema", False),
         freeze_dfl=params.get("freeze_dfl", False),
-        experiment_name=experiment_name
+        experiment_name=experiment_name,
+        loss_type=loss_type
     )
     
     save_cfg = SaveConfig(

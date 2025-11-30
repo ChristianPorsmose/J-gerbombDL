@@ -19,6 +19,7 @@ class TrainingConfig:
     use_ema: bool
     freeze_dfl: bool
     experiment_name: str = None
+    loss_type: str = "standard"
 
 @dataclass
 class SaveConfig:

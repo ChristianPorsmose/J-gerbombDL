@@ -45,10 +45,12 @@ class JägerBombMetrics:
         
         # CSV logging
         self.csv_path = self.save_dir / "results.csv"
+        # Check if using spatial consistency loss
+        self.has_spatial_loss = device is not None  # Will be set properly by trainer
         self.csv_headers = [
             "epoch", 
-            "train/box_loss", "train/cls_loss", "train/dfl_loss",
-            "val/box_loss", "val/cls_loss", "val/dfl_loss",
+            "train/box_loss", "train/cls_loss", "train/dfl_loss", "train/spatial_loss",
+            "val/box_loss", "val/cls_loss", "val/dfl_loss", "val/spatial_loss",
             "metrics/precision(B)", "metrics/recall(B)", "metrics/mAP50(B)", "metrics/mAP50-95(B)",
             "lr/pg0"
         ]
@@ -254,8 +256,8 @@ class JägerBombMetrics:
         
         Args:
             epoch: Current epoch number
-            train_losses: Dict with 'box', 'cls', 'dfl' keys
-            val_losses: Dict with 'box', 'cls', 'dfl' keys
+            train_losses: Dict with 'box', 'cls', 'dfl', 'spatial' keys
+            val_losses: Dict with 'box', 'cls', 'dfl', 'spatial' keys
             metrics: Dict with 'precision', 'recall', 'mAP50', 'mAP50-95' keys
             lr: Current learning rate
         """
@@ -264,9 +266,11 @@ class JägerBombMetrics:
             train_losses.get('box', 0),
             train_losses.get('cls', 0),
             train_losses.get('dfl', 0),
+            train_losses.get('spatial', 0),
             val_losses.get('box', 0),
             val_losses.get('cls', 0),
             val_losses.get('dfl', 0),
+            val_losses.get('spatial', 0),
             metrics.get('precision', 0),
             metrics.get('recall', 0),
             metrics.get('mAP50', 0),
@@ -334,9 +338,11 @@ class JägerBombMetrics:
             ('train/box_loss', 'Train Box Loss'),
             ('train/cls_loss', 'Train Class Loss'),
             ('train/dfl_loss', 'Train DFL Loss'),
+            ('train/spatial_loss', 'Train Spatial Loss'),
             ('val/box_loss', 'Val Box Loss'),
             ('val/cls_loss', 'Val Class Loss'),
             ('val/dfl_loss', 'Val DFL Loss'),
+            ('val/spatial_loss', 'Val Spatial Loss'),
             ('metrics/precision(B)', 'Precision'),
             ('metrics/recall(B)', 'Recall'),
             ('metrics/mAP50(B)', 'mAP@0.5'),
