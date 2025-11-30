@@ -46,21 +46,57 @@ COLORS_1A = {
 }
 
 PHASE1B_EXPERIMENTS = [
-    "phase1b_not_frozen",
-    "phase1b_fully_frozen",
-    "phase1b_frozen_half",
+    #"phase1b_not_frozen",
+    #"phase1b_fully_frozen",
+    #"phase1b_frozen_half",
+    "phase2_no_augmentation_20_images",
+    "phase2_no_augmentation_40_images",
+    "phase2_no_augmentation_80_images",
+    "phase2_no_augmentation_all_images",
+    "phase2_light_augmentation_20_images",
+    "phase2_light_augmentation_40_images",
+    "phase2_light_augmentation_80_images",
+    "phase2_light_augmentation_all_images",
+    "phase2_geo_augmentation_20_images",
+    "phase2_geo_augmentation_40_images",
+    "phase2_geo_augmentation_80_images",
+    "phase2_geo_augmentation_all_images",
 ]
 
 EXPERIMENT_1B_LABELS = {
-    "phase1b_not_frozen": "Not Frozen",
-    "phase1b_fully_frozen": "Fully Frozen",
-    "phase1b_frozen_half": "Frozen Half",
+    #"phase1b_not_frozen": "Not Frozen",
+    #"phase1b_fully_frozen": "Fully Frozen",
+    #"phase1b_frozen_half": "Frozen Half",
+    "phase2_no_augmentation_20_images": "Phase 2 No Augmentation (20 Images)",
+    "phase2_no_augmentation_40_images": "Phase 2 No Augmentation (40 Images)",
+    "phase2_no_augmentation_80_images": "Phase 2 No Augmentation (80 Images)",
+    "phase2_no_augmentation_all_images": "Phase 2 No Augmentation (All Images)",
+    "phase2_light_augmentation_20_images": "Phase 2 Light Augmentation (20 Images)",
+    "phase2_light_augmentation_40_images": "Phase 2 Light Augmentation (40 Images)",
+    "phase2_light_augmentation_80_images": "Phase 2 Light Augmentation (80 Images)",
+    "phase2_light_augmentation_all_images": "Phase 2 Light Augmentation (All Images)",
+    "phase2_geo_augmentation_20_images": "Phase 2 Geo Augmentation (20 Images)",
+    "phase2_geo_augmentation_40_images": "Phase 2 Geo Augmentation (40 Images)",
+    "phase2_geo_augmentation_80_images": "Phase 2 Geo Augmentation (80 Images)",
+    "phase2_geo_augmentation_all_images": "Phase 2 Geo Augmentation (All Images)",
 }
 
 COLORS_1B = {
-    "phase1b_not_frozen": "#d61c3b",
-    "phase1b_fully_frozen": "#11d663",
-    "phase1b_frozen_half": "#1440d1",
+    #"phase1b_not_frozen": "#d61c3b",
+    #"phase1b_fully_frozen": "#11d663",
+    #"phase1b_frozen_half": "#1440d1",
+    "phase2_no_augmentation_20_images": "#ff9d00ff",
+    "phase2_no_augmentation_40_images": "#c27800ff",
+    "phase2_no_augmentation_80_images": "#925a00ff",
+    "phase2_no_augmentation_all_images": "#553400ff",
+    "phase2_light_augmentation_20_images": "#3cff00",
+    "phase2_light_augmentation_40_images": "#29b100",
+    "phase2_light_augmentation_80_images": "#1b7200",
+    "phase2_light_augmentation_all_images": "#114900",
+    "phase2_geo_augmentation_20_images": "#8e44ad",
+    "phase2_geo_augmentation_40_images": "#2c3e50",
+    "phase2_geo_augmentation_80_images": "#d35400",
+    "phase2_geo_augmentation_all_images": "#7f8c8d",
 }
 
 PHASE_NAME = "1B"
@@ -286,14 +322,24 @@ def plot_loss_convergence(experiments_data: List[Dict]):
     """Plot validation loss convergence for all experiments."""
     plt.figure(figsize=(14, 7))
     
+    # Collect all loss values to compute 95th percentile
+    all_losses = []
+    
     for exp_data in experiments_data:
         df = exp_data['results']
         val_total = df['val/box_loss'] + df['val/cls_loss'] + df['val/dfl_loss']
+        all_losses.extend(val_total.values)
         
         plt.plot(df['epoch'], val_total, 
                 label=exp_data['label'],
                 linewidth=2.5,
                 color=COLORS[exp_data['name']])
+    
+    # Set y-axis limits to 95th percentile to avoid outlier scaling
+    if all_losses:
+        y_max = np.percentile(all_losses, 95)
+        y_min = np.percentile(all_losses, 5)
+        plt.ylim(bottom=max(0, y_min * 0.9), top=y_max * 1.1)
     
     plt.xlabel('Epoch', fontsize=13, fontweight='bold')
     plt.ylabel('Validation Total Loss', fontsize=13, fontweight='bold')
@@ -312,11 +358,14 @@ def plot_train_val_gap(experiments_data: List[Dict]):
     """Plot train-val gap over time for overfitting analysis."""
     plt.figure(figsize=(14, 7))
     
+    # Collect all gap values for percentile-based scaling
+    all_gaps = []
     for exp_data in experiments_data:
         df = exp_data['results']
         train_total = df['train/box_loss'] + df['train/cls_loss'] + df['train/dfl_loss']
         val_total = df['val/box_loss'] + df['val/cls_loss'] + df['val/dfl_loss']
         gap_percent = ((train_total - val_total) / train_total * 100).abs()
+        all_gaps.extend(gap_percent.values)
         
         plt.plot(df['epoch'], gap_percent,
                 label=exp_data['label'],
@@ -325,6 +374,12 @@ def plot_train_val_gap(experiments_data: List[Dict]):
     
     plt.axhline(y=15, color='red', linestyle='--', linewidth=2, 
                 label='Overfitting Threshold (15%)', alpha=0.7)
+    
+    # Set y-axis limits based on 5th-95th percentile to handle outliers
+    if all_gaps:
+        p5 = np.percentile(all_gaps, 5)
+        p95 = np.percentile(all_gaps, 95)
+        plt.ylim(bottom=max(0, p5 * 0.9), top=p95 * 1.1)
     
     plt.xlabel('Epoch', fontsize=13, fontweight='bold')
     plt.ylabel('Train-Val Gap (%)', fontsize=13, fontweight='bold')
@@ -475,6 +530,10 @@ def plot_test_loss_comparison(experiments_data: List[Dict]):
             test_dfl.append(0)
             test_spatial.append(0)
     
+    # Collect all loss values for 95th percentile calculation
+    all_losses = test_box + test_cls + test_dfl + test_spatial
+    all_losses = [v for v in all_losses if v > 0]  # Exclude zeros
+    
     x = np.arange(len(labels))
     width = 0.2
     
@@ -487,6 +546,11 @@ def plot_test_loss_comparison(experiments_data: List[Dict]):
                    color='#2ecc71', edgecolor='black', linewidth=1)
     bars4 = ax.bar(x + 1.5*width, test_spatial, width, label='Spatial Loss', 
                    color='#9b59b6', edgecolor='black', linewidth=1)
+    
+    # Set y-axis limits to 95th percentile to avoid outlier scaling
+    if all_losses:
+        y_max = np.percentile(all_losses, 95)
+        ax.set_ylim(top=y_max * 1.15)  # Add 15% headroom for labels
     
     ax.set_ylabel('Loss Value', fontsize=13, fontweight='bold')
     ax.set_title(f'Phase {PHASE_NAME}: Test Loss Components Comparison', fontsize=15, fontweight='bold')
