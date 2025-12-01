@@ -2,9 +2,14 @@ from configs import TrainingConfig, SaveConfig
 import torch
 import numpy as np
 from pathlib import Path
-import cv2
-import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
+from utils import convert_to_python_types, xywh_to_xyxy
+from jäger_bomb_visualizer import JägerBombVisualizer
+from jäger_bomb_logger import JägerBombLogger
+import json
+from jäger_bomb_metrics import JägerBombMetrics
+from ultralytics.models import YOLO
+from jäger_bomb_metrics import JägerBombMetrics
+from datetime import datetime
 
 class JägerBombTrainer:
     def __init__(self, cfg: TrainingConfig, save_cfg : SaveConfig):
@@ -30,11 +35,10 @@ class JägerBombTrainer:
         
         # Initialize metrics tracker
         self._init_metrics()
+        self.visualizer = JägerBombVisualizer(self.metrics.save_dir)
     
     def _init_metrics(self):
         """Initialize metrics tracking."""
-        from jäger_bomb_metrics import JägerBombMetrics
-        from datetime import datetime
         
         # Get class names from model
         names = getattr(self.cfg.yolo_model, 'names', {0: "class0", 1: "class1"})
@@ -63,301 +67,9 @@ class JägerBombTrainer:
         # Store config parameters for logging
         self.config_params = getattr(self.cfg, 'config_params', None)
     
-    def _log_config_params(self):
-        """Log all configuration parameters to a file."""
-        import json
-        config_path = Path(self.metrics.save_dir) / "config.json"
-        
-        # Convert all values to JSON-serializable format
-        def convert_to_serializable(obj):
-            if isinstance(obj, Path):
-                return str(obj)
-            elif isinstance(obj, (np.integer, np.floating)):
-                return obj.item()
-            elif isinstance(obj, np.ndarray):
-                return obj.tolist()
-            elif isinstance(obj, dict):
-                return {k: convert_to_serializable(v) for k, v in obj.items()}
-            elif isinstance(obj, (list, tuple)):
-                return [convert_to_serializable(item) for item in obj]
-            elif hasattr(obj, '__dict__'):
-                return str(obj)
-            else:
-                return obj
-        
-        # Collect all TrainingConfig parameters
-        config_data = {}
-        
-        # Add config_params if available (original YAML/dict config)
-        if self.config_params is not None:
-            config_data['original_config'] = convert_to_serializable(self.config_params)
-        
-        # Add all TrainingConfig attributes
-        config_data['training_config'] = {
-            'device': self.cfg.device,
-            'epochs': self.cfg.epochs,
-            'log_interval': self.cfg.log_interval,
-            'use_ema': self.cfg.use_ema,
-            'freeze_dfl': self.cfg.freeze_dfl,
-            'experiment_name': self.cfg.experiment_name,
-            'loss_type': self.cfg.loss_type,
-        }
-        
-        # Add optimizer info
-        config_data['optimizer'] = {
-            'type': type(self.cfg.optimizer).__name__,
-            'param_groups': []
-        }
-        for i, pg in enumerate(self.cfg.optimizer.param_groups):
-            pg_info = {
-                'group_id': i,
-                'num_params': len(pg['params']),
-                'lr': pg.get('lr', 'N/A'),
-                'weight_decay': pg.get('weight_decay', 'N/A'),
-                'momentum': pg.get('momentum', 'N/A'),
-                'betas': pg.get('betas', 'N/A'),
-            }
-            config_data['optimizer']['param_groups'].append(pg_info)
-        
-        # Add scheduler info
-        config_data['scheduler'] = {
-            'type': type(self.cfg.scheduler).__name__,
-        }
-        
-        # Add dataloader info
-        config_data['dataloaders'] = {
-            'train': {
-                'batch_size': self.cfg.train_dataloader.batch_size,
-                'num_batches': len(self.cfg.train_dataloader),
-                'dataset_size': len(self.cfg.train_dataloader.dataset),
-            },
-            'val': {
-                'batch_size': self.cfg.val_dataloader.batch_size,
-                'num_batches': len(self.cfg.val_dataloader),
-                'dataset_size': len(self.cfg.val_dataloader.dataset),
-            },
-            'test': {
-                'batch_size': self.cfg.test_dataloader.batch_size,
-                'num_batches': len(self.cfg.test_dataloader),
-                'dataset_size': len(self.cfg.test_dataloader.dataset),
-            }
-        }
-        
-        # Add loss function info
-        config_data['loss_function'] = {
-            'type': type(self.cfg.loss_fn).__name__,
-        }
-        
-        # Add model info
-        config_data['model'] = {
-            'type': type(self.cfg.model).__name__,
-            'total_params': sum(p.numel() for p in self.cfg.model.parameters()),
-            'trainable_params': sum(p.numel() for p in self.cfg.model.parameters() if p.requires_grad),
-        }
-        
-        with open(config_path, 'w') as f:
-            json.dump(config_data, f, indent=2)
-        
-        print(f"📝 Configuration parameters saved → {config_path}")
-        
-        # Also print key parameters to console
-        print("\n" + "="*60)
-        print("🔧 TRAINING CONFIGURATION")
-        print("="*60)
-        print(f"  Experiment: {config_data['training_config']['experiment_name']}")
-        print(f"  Device: {config_data['training_config']['device']}")
-        print(f"  Epochs: {config_data['training_config']['epochs']}")
-        print(f"  Optimizer: {config_data['optimizer']['type']}")
-        print(f"  Loss Type: {config_data['training_config']['loss_type']}")
-        print(f"  Use EMA: {config_data['training_config']['use_ema']}")
-        print(f"  Freeze DFL: {config_data['training_config']['freeze_dfl']}")
-        print(f"  Train Dataset: {config_data['dataloaders']['train']['dataset_size']} samples")
-        print(f"  Val Dataset: {config_data['dataloaders']['val']['dataset_size']} samples")
-        print(f"  Test Dataset: {config_data['dataloaders']['test']['dataset_size']} samples")
-        print(f"  Model Params: {config_data['model']['trainable_params']:,} trainable / {config_data['model']['total_params']:,} total")
-        if 'original_config' in config_data:
-            print("\n  Original Config Parameters:")
-            for key, value in config_data['original_config'].items():
-                if key not in ['train_data_path', 'val_data_path', 'test_data_path', 'model']:
-                    print(f"    {key}: {value}")
-        print("="*60 + "\n")
-    
-    def _visualize_batch(self, images, batch_dict, predictions=None, epoch=0, is_train=True, max_imgs=4):
-        """
-        Visualize a batch with ground truth boxes and optionally predictions.
-        
-        Args:
-            images: Tensor [B, C, H, W]
-            batch_dict: Dict with 'batch_idx', 'cls', 'bboxes' (ground truth)
-            predictions: Optional model predictions
-            epoch: Current epoch number
-            is_train: Whether this is training or validation batch
-            max_imgs: Maximum number of images to visualize
-        """
-        save_dir = Path(self.metrics.save_dir) / "visualizations"
-        save_dir.mkdir(parents=True, exist_ok=True)
-        
-        split = "train" if is_train else "val"
-        batch_size = min(images.shape[0], max_imgs)
-        
-        # Create figure with subplots
-        fig, axes = plt.subplots(1, batch_size, figsize=(5*batch_size, 5))
-        if batch_size == 1:
-            axes = [axes]
-        
-        # Color map: shot=red, cup=blue
-        colors = {0: 'red', 1: 'blue'}
-        labels = {0: 'shot', 1: 'cup'}
-        
-        for idx in range(batch_size):
-            ax = axes[idx]
-            
-            # Convert image tensor to numpy for visualization
-            img = images[idx].cpu().permute(1, 2, 0).numpy()
-            img = (img * 255).astype(np.uint8)
-            
-            ax.imshow(img)
-            ax.axis('off')
-            
-            h, w = img.shape[:2]
-            
-            # Draw ground truth boxes
-            img_mask = batch_dict['batch_idx'] == idx
-            if img_mask.any():
-                gt_classes = batch_dict['cls'][img_mask].cpu().numpy()
-                gt_bboxes = batch_dict['bboxes'][img_mask].cpu().numpy()  # normalized xywh
-                
-                for cls, bbox in zip(gt_classes, gt_bboxes):
-                    # Convert normalized xywh to pixel xyxy
-                    x_center, y_center, width, height = bbox
-                    x1 = (x_center - width/2) * w
-                    y1 = (y_center - height/2) * h
-                    box_w = width * w
-                    box_h = height * h
-                    
-                    cls = int(cls)
-                    rect = Rectangle((x1, y1), box_w, box_h, 
-                                   linewidth=2, edgecolor=colors[cls], 
-                                   facecolor='none', linestyle='-',
-                                   label=f'GT {labels[cls]}')
-                    ax.add_patch(rect)
-            
-            # Draw predictions if provided
-            if predictions is not None:
-                # Process predictions (assumed to be model output)
-                # predictions is typically a list of detection results per image
-                pred_boxes = predictions[0][idx]  # Get predictions for this image
-                
-                if len(pred_boxes) > 0:
-                    # pred_boxes expected format: [x1, y1, x2, y2, conf, cls]
-                    for pred in pred_boxes:
-                        if len(pred) < 6:
-                            continue
-                        x1, y1, x2, y2, conf, cls = pred[:6]
-                        cls = int(cls)
-                        
-                        if conf < 0.25:  # Confidence threshold
-                            continue
-                        
-                        # Convert to pixel coordinates (already in xyxy format)
-                        rect = Rectangle((x1, y1), x2-x1, y2-y1,
-                                       linewidth=2, edgecolor=colors.get(cls, 'green'),
-                                       facecolor='none', linestyle='--',
-                                       label=f'Pred {labels.get(cls, "?")} {conf:.2f}')
-                        ax.add_patch(rect)
-            
-            ax.set_title(f'Image {idx}', fontsize=10)
-        
-        # Add legend
-        handles, labels_list = axes[0].get_legend_handles_labels()
-        if handles:
-            # Remove duplicate labels
-            by_label = dict(zip(labels_list, handles))
-            fig.legend(by_label.values(), by_label.keys(), 
-                      loc='upper center', bbox_to_anchor=(0.5, 0.98), ncol=4)
-        
-        plt.tight_layout()
-        
-        # Save figure
-        save_path = save_dir / f"epoch{epoch:03d}_{split}_batch.png"
-        plt.savefig(save_path, dpi=150, bbox_inches='tight')
-        plt.close()
-        
-        print(f"📸 Saved {split} visualization → {save_path}")
-    
-    def _visualize_predictions(self, epoch):
-        """Run model on validation set and visualize predictions."""
-        from ultralytics.utils.nms import non_max_suppression
-        
-        model_to_eval = self.ema.ema if self.ema else self.cfg.model
-        model_to_eval.eval()
-        
-        save_dir = Path(self.metrics.save_dir) / "visualizations" / f"epoch{epoch:03d}_predictions"
-        save_dir.mkdir(parents=True, exist_ok=True)
-        
-        colors = {0: (255, 0, 0), 1: (0, 0, 255)}  # BGR: shot=red, cup=blue
-        labels = {0: 'shot', 1: 'cup'}
-        
-        print(f"🎨 Generating prediction visualizations for epoch {epoch}...")
-        
-        with torch.no_grad():
-            for batch_idx, (X_val, y_val) in enumerate(self.cfg.val_dataloader):
-                X_val = X_val.to(self.cfg.device)
-                
-                # Get raw predictions from model
-                preds = model_to_eval(X_val)
-                
-                # Post-process predictions with NMS
-                # preds is typically a tuple (inference_out, loss_out) or just inference_out
-                if isinstance(preds, tuple):
-                    preds = preds[0]
-                
-                # Apply NMS to filter predictions
-                predictions = non_max_suppression(preds, conf_thres=0.25, iou_thres=0.45, max_det=300)
-                
-                # Visualize each image in batch
-                for img_idx in range(X_val.shape[0]):
-                    # Convert tensor to numpy image
-                    img = X_val[img_idx].cpu().permute(1, 2, 0).numpy()
-                    img = (img * 255).astype(np.uint8).copy()
-                    h, w = img.shape[:2]
-                    
-                    # Draw predictions for this image
-                    if predictions and len(predictions) > img_idx:
-                        dets = predictions[img_idx]  # [N, 6] tensor: x1, y1, x2, y2, conf, cls
-                        
-                        if dets is not None and len(dets) > 0:
-                            for det in dets:
-                                x1, y1, x2, y2, conf, cls = det.cpu().numpy()
-                                x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-                                cls = int(cls)
-                                
-                                # Draw box
-                                cv2.rectangle(img, (x1, y1), (x2, y2), colors.get(cls, (0, 255, 0)), 2)
-                                
-                                # Draw label
-                                label_text = f'{labels.get(cls, "?")} {conf:.2f}'
-                                (tw, th), _ = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-                                cv2.rectangle(img, (x1, y1-th-4), (x1+tw, y1), colors.get(cls, (0, 255, 0)), -1)
-                                cv2.putText(img, label_text, (x1, y1-2), 
-                                          cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-                    
-                    # Save image
-                    save_path = save_dir / f"batch{batch_idx:03d}_img{img_idx:02d}.png"
-                    cv2.imwrite(str(save_path), cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
-                
-                # Limit to first few batches to avoid too many images
-                if batch_idx >= 2:  # Visualize first 3 batches
-                    break
-        
-        print(f"✅ Saved prediction visualizations → {save_dir}")
-    
     @torch.no_grad()
     def _evaluate_test_set(self):
         """Evaluate best.pt model on test dataset and save results."""
-        import json
-        from jäger_bomb_metrics import JägerBombMetrics
-        from ultralytics.models import YOLO
         
         # Load best model
         best_model_path = Path(self.metrics.save_dir) / "weights" / "best.pt"
@@ -491,23 +203,6 @@ class JägerBombTrainer:
             print(f"⚠️ Could not compute test metrics: {e}")
         
         # Save test results to JSON (convert numpy types to native Python)
-        def convert_to_python_types(obj):
-            """Recursively convert numpy/torch types to native Python types."""
-            import numpy as np
-            if isinstance(obj, dict):
-                return {k: convert_to_python_types(v) for k, v in obj.items()}
-            elif isinstance(obj, (list, tuple)):
-                return [convert_to_python_types(item) for item in obj]
-            elif isinstance(obj, (np.integer, np.int32, np.int64)):
-                return int(obj)
-            elif isinstance(obj, (np.floating, np.float32, np.float64)):
-                return float(obj)
-            elif isinstance(obj, np.ndarray):
-                return obj.tolist()
-            elif hasattr(obj, 'item'):  # torch tensors
-                return obj.item()
-            else:
-                return obj
         
         test_results = {
             'losses': convert_to_python_types(avg_test_losses),
@@ -579,7 +274,7 @@ class JägerBombTrainer:
                     cls = img_targets[:, 0]
                     bboxes_xywh = img_targets[:, 1:]
                     # Convert to xyxy pixel coordinates
-                    bboxes_xyxy = self._xywh_to_xyxy(bboxes_xywh, img_w, img_h)
+                    bboxes_xyxy = xywh_to_xyxy(bboxes_xywh, img_w, img_h)
                     
                     all_gt_cls.append(cls)
                     all_gt_bboxes.append(bboxes_xyxy)
@@ -629,24 +324,6 @@ class JägerBombTrainer:
             'spatial': avg_spatial,
             'total': avg_total
         }
-    
-    def _xywh_to_xyxy(self, bboxes: torch.Tensor, img_w: int, img_h: int) -> torch.Tensor:
-        """Convert bboxes from normalized xywh to pixel xyxy format."""
-        if bboxes.numel() == 0:
-            return bboxes
-        
-        # bboxes: [N, 4] in format [x_center, y_center, width, height] normalized
-        x_center = bboxes[:, 0] * img_w
-        y_center = bboxes[:, 1] * img_h
-        width = bboxes[:, 2] * img_w
-        height = bboxes[:, 3] * img_h
-        
-        x1 = x_center - width / 2
-        y1 = y_center - height / 2
-        x2 = x_center + width / 2
-        y2 = y_center + height / 2
-        
-        return torch.stack([x1, y1, x2, y2], dim=1)
 
     def _prepare_batch_dict(self, images: torch.Tensor, targets: torch.Tensor) -> dict:
         valid_mask = targets[:, :, 0] != -1
@@ -694,8 +371,7 @@ class JägerBombTrainer:
         count = 0
         early_stoppage_count = 9999999999
         
-        # Log all configuration parameters at the start of training
-        self._log_config_params()
+        JägerBombLogger.log_config_params(self.metrics.save_dir, self.cfg, self.config_params)
         
         # Warmup settings (like Ultralytics)
         warmup_epochs = 3.0
@@ -729,7 +405,7 @@ class JägerBombTrainer:
                 
                 # Save first training batch for visualization (only at epoch 0)
                 if batch_idx == 0 and epoch == 0 and not first_batch_saved:
-                    self._visualize_batch(X, batch, predictions=None, 
+                    self.visualizer.visualize_batch(X, batch, predictions=None, 
                                         epoch=epoch, is_train=True, max_imgs=4)
                     first_batch_saved = True
                 
@@ -795,7 +471,7 @@ class JägerBombTrainer:
             # Generate prediction visualizations every 10 epochs
             if generate_plots:
                 # Visualize validation predictions
-                self._visualize_predictions(epoch)
+                self.visualizer.visualize_predictions(epoch, self.cfg.model, self.cfg.val_dataloader)
             
             try:
                 det_metrics = self.metrics.compute_metrics(plot=generate_plots)
