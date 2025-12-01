@@ -10,6 +10,7 @@ from jäger_bomb_metrics import JägerBombMetrics
 from ultralytics.models import YOLO
 from jäger_bomb_metrics import JägerBombMetrics
 from datetime import datetime
+import click
 
 class JägerBombTrainer:
     def __init__(self, cfg: TrainingConfig, save_cfg : SaveConfig):
@@ -53,7 +54,7 @@ class JägerBombTrainer:
             save_dir=str(save_dir),
             device=self.cfg.device
         )
-        print(f"✅ Metrics tracking initialized → {save_dir}")
+        click.secho(f"[SUCCESS] Metrics tracking initialized → {save_dir}", fg="green")
         
         # Store config parameters for logging
         self.config_params = getattr(self.cfg, 'config_params', None)
@@ -65,17 +66,17 @@ class JägerBombTrainer:
         # Load best model
         best_model_path = Path(self.metrics.save_dir) / "weights" / "best.pt"
         if not best_model_path.exists():
-            print(f"⚠️ best.pt not found at {best_model_path}, skipping test evaluation")
+            click.secho(f"[WARNING] best.pt not found at {best_model_path}, skipping test evaluation", fg="yellow")
             return
         
-        print(f"Loading best model from {best_model_path}...")
+        click.echo(f"[INFO] Loading best model from {best_model_path}...", fg="blue")
         test_model = YOLO(str(best_model_path))
         test_model.model.eval()
         test_model.model.to(self.cfg.device)
         
         # Check if test dataloader exists
         if not hasattr(self.cfg, 'test_dataloader') or self.cfg.test_dataloader is None:
-            print("⚠️ No test dataloader configured, skipping test evaluation")
+            click.secho("[WARNING] No test dataloader configured, skipping test evaluation", fg="yellow")
             return
         
         # Initialize metrics for test set
@@ -89,7 +90,7 @@ class JägerBombTrainer:
             device=self.cfg.device
         )
         
-        print("Running inference on test set...")
+        click.echo("Running inference on test set...")
         test_box = 0
         test_cls = 0
         test_dfl = 0
@@ -161,7 +162,7 @@ class JägerBombTrainer:
             'total': (test_box + test_cls + test_dfl + test_spatial) / count
         }
         
-        print(
+        click.echo(
             f"TEST SET LOSSES: "
             f"Box: {avg_test_losses['box']:.4f}, "
             f"Cls: {avg_test_losses['cls']:.4f}, "
@@ -173,7 +174,7 @@ class JägerBombTrainer:
         # Compute detection metrics
         try:
             det_metrics = test_metrics.compute_metrics(plot=True)
-            print(
+            click.echo(
                 f"TEST SET METRICS: "
                 f"P: {det_metrics['precision']:.4f}, "
                 f"R: {det_metrics['recall']:.4f}, "
@@ -185,13 +186,13 @@ class JägerBombTrainer:
             try:
                 test_metrics.confusion_matrix.plot(normalize=True, save_dir=str(Path(self.metrics.save_dir) / "test_results"))
                 test_metrics.confusion_matrix.plot(normalize=False, save_dir=str(Path(self.metrics.save_dir) / "test_results"))
-                print("✅ Test confusion matrices generated")
+                click.secho("[SUCCESS] Test confusion matrices generated", fg="green")
             except Exception as e:
-                print(f"⚠️ Could not generate test confusion matrices: {e}")
+                click.secho(f"[ERROR] Could not generate test confusion matrices: {e}", fg="red")
             
         except Exception as e:
             det_metrics = {'precision': 0, 'recall': 0, 'mAP50': 0, 'mAP50-95': 0}
-            print(f"⚠️ Could not compute test metrics: {e}")
+            click.secho(f"[ERROR] Could not compute test metrics: {e}", fg="red")
         
         # Save test results to JSON (convert numpy types to native Python)
         
@@ -205,7 +206,7 @@ class JägerBombTrainer:
         with open(results_path, 'w') as f:
             json.dump(test_results, f, indent=2)
         
-        print(f"✅ Test results saved → {results_path}")
+        click.secho(f"Test results saved → {results_path}", fg="green")
     
     @torch.no_grad()
     def _validate(self, epoch):
@@ -285,7 +286,7 @@ class JägerBombTrainer:
             try:
                 self.metrics.update(pred_val, metrics_batch)
             except Exception as e:
-                print(f"⚠️ Metrics update failed: {e}")
+                click.secho(f"[ERROR] Metrics update failed: {e}", fg="red")
                 import traceback
                 traceback.print_exc()
         
@@ -297,7 +298,7 @@ class JägerBombTrainer:
         avg_total = avg_box + avg_cls + avg_dfl + avg_spatial
         
         spatial_str = f", Spatial: {avg_spatial:.4f}" if avg_spatial > 0 else ""
-        print(
+        click.echo(
             f"VALIDATION — Epoch {epoch}: "
             f"Box: {avg_box:.4f}, "
             f"Cls: {avg_cls:.4f}, "
@@ -350,9 +351,9 @@ class JägerBombTrainer:
         if is_best:
             best_path = save_dir / "best.pt"
             self.cfg.yolo_model.save(str(best_path))
-            print(f"✅ Model saved at epoch {epoch} → {best_path}")
+            click.secho(f"[SUCCESS] Model saved at epoch {epoch} → {best_path}", fg="green")
         else:
-            print(f"💾 Checkpoint saved → {last_path}")  
+            click.secho(f"[INFO] Checkpoint saved → {last_path}", fg="blue")  
 
     def train(self):
         self.cfg.model.to(self.cfg.device)
@@ -434,7 +435,7 @@ class JägerBombTrainer:
                 
 
                 if batch_idx % self.cfg.log_interval == 0:
-                    print(
+                    click.echo(
                         f"Epoch {epoch}, Batch {batch_idx}, "
                         f"Box: {box_loss:.4f}, Cls: {cls_loss:.4f}, DFL: {dfl_loss:.4f}, "
                         f"Total: {(box_loss+cls_loss+dfl_loss):.4f}"
@@ -463,7 +464,7 @@ class JägerBombTrainer:
                 det_metrics = self.metrics.compute_metrics(plot=generate_plots)
                 
                 # Print metrics
-                print(
+                click.echo(
                     f"METRICS — Epoch {epoch}: "
                     f"P: {det_metrics['precision']:.4f}, "
                     f"R: {det_metrics['recall']:.4f}, "
@@ -472,14 +473,14 @@ class JägerBombTrainer:
                 )
             except Exception as e:
                 det_metrics = {'precision': 0, 'recall': 0, 'mAP50': 0, 'mAP50-95': 0}
-                print(f"⚠️ Could not compute metrics: {e}")
+                click.secho(f"Could not compute metrics: {e}", fg="red")
             
             # Step the learning rate scheduler (only after warmup)
             if epoch >= warmup_epochs:
                 self.cfg.scheduler.step()
             
             current_lr = self.cfg.optimizer.param_groups[0]['lr']
-            print(f"Learning rate: {current_lr:.6f}")
+            click.echo(f"Learning rate: {current_lr:.6f}")
             
             # Log epoch to CSV
             self.metrics.log_epoch(
@@ -501,15 +502,15 @@ class JägerBombTrainer:
                 count += 1
             
             if count >= early_stoppage_count:
-                print(f"Early stopping at epoch {epoch}")
+                click.secho(f"[INFO] Early stopping at epoch {epoch}", fg="blue")
                 break
         
         # Finalize metrics (generate final plots)
-        print("\n📊 Generating final metrics and plots...")
+        click.secho("\n[INFO] Generating final metrics and plots...", fg="blue")
         self.metrics.finalize()
         
         # Evaluate best model on test set
-        print("\n🧪 Evaluating best model on test set...")
+        click.secho("\n[INFO] Evaluating best model on test set...", fg="blue")
         self._evaluate_test_set()
         
-        print("✅ Training complete!")
+        click.secho("[SUCCESS] Training complete!", fg="green")

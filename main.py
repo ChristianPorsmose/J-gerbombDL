@@ -10,9 +10,8 @@ from torchvision.transforms import v2 as T
 from types import SimpleNamespace
 from letter_box_transform import LetterBoxTransform
 from yolo_compose import YOLOCompose
-import os
-import argparse
 import experiment_configs
+import click
 from utils import (
     freeze_backbone_layers,
     unfreeze_all_layers,
@@ -31,27 +30,23 @@ def collate_fn(batch):
     images = torch.stack(images, 0)
     return images, padded_targets
 
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser(description="Train Jäger Bomb Detection Model")
-    parser.add_argument("--config", type=str, default="setup.yaml", 
-                        help="Path to config file (default: setup.yaml)")
-    parser.add_argument("--config-dict", type=str, default=None,
-                        help="Config name from experiment_configs (e.g., PHASE1A_SGD_STANDARD)")
-    args = parser.parse_args()
-
-    # Load config from dict or YAML file
-    if args.config_dict:
-        params = getattr(experiment_configs, args.config_dict)
-        print(f"📦 Loaded config: {args.config_dict}")
+# TODO: change config-dicts to actually just be a file for each experiment -> cleaner code
+@click.command()
+@click.option("--config", default="setup.yaml", help="Path to YAML config file")
+@click.option("--config-dict", default=None, help="Config name from experiment_configs (e.g., PHASE1A_SGD_STANDARD)")
+def main(config, config_dict):
+    if config_dict:
+        params = getattr(experiment_configs, config_dict)
+        click.secho(f"[INFO] Loaded config: {config_dict}", fg="blue")
     else:
-        with open(args.config, "r") as f:
+        with open(config, "r") as f:
             params = yaml.safe_load(f)
-        print(f"📦 Loaded config from: {args.config}")
+        click.secho(f"[INFO] Loaded config from {config}", fg="blue")
     
+    # TODO : following the other todo, this can just extract the name from the file name
     experiment_name = params.get("experiment_name")
     if experiment_name:
-        print(f"🧪 Running experiment: {experiment_name}")
+       click.secho(f"[EXPERIMENT] Running experiment: {experiment_name}", fg="cyan", bold=True)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch.set_default_device(device)
@@ -157,3 +152,8 @@ if __name__ == "__main__":
     trainer = JägerBombTrainer(cfg, save_cfg)
 
     trainer.train()
+
+
+
+if __name__ == "__main__":
+    main()
