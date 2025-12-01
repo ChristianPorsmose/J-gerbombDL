@@ -1,0 +1,7 @@
+names:
+  0: shot
+  1: cup
+path: .
+train: train.txt
+val: val.txt
+test: test.txt
