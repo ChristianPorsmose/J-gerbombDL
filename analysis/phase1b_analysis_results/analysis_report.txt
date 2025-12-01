@@ -2,134 +2,102 @@
 PHASE 1B: OPTIMIZER SELECTION - ANALYSIS REPORT
 ================================================================================
 
-🏆 RECOMMENDED CONFIGURATION: Phase 2 Light Augmentation (All Images)
+🏆 RECOMMENDED CONFIGURATION: Phase 2 No Augmentation (All Images)
 
 JUSTIFICATION:
-  • Validation mAP@0.5:0.95: 0.9834 (Rank #1)
-  • Test mAP@0.5: 0.9950 (Rank #6)
-  • Train-Val Gap: 18.42% (Rank #1)
-  • Val-Test Gap: 0.00% (Rank #6)
+  • Validation mAP@0.5:0.95: 0.9793 (Rank #1)
+  • Test mAP@0.5: 0.9950 (Rank #4)
+  • Train-Val Gap: 20.33% (Rank #2)
+  • Val-Test Gap: 0.00% (Rank #4)
   • Convergence: Epoch 3 (Rank #2)
-  • Stability: 0.0097 std (Rank #2)
-  • Total Score: 32.25 (Lower is better)
+  • Stability: 0.0094 std (Rank #1)
+  • Total Score: 25.75 (Lower is better)
 
 ================================================================================
 COMPLETE RANKINGS
 ================================================================================
 
-🥇 Phase 2 Light Augmentation (All Images)
-   Val mAP@0.5:0.95: 0.9834
-   Test mAP@0.5: 0.9950
-   Train-Val Gap: 18.42%
-   Convergence: Epoch 3
-   Total Score: 32.25
-
-🥈 Phase 2 No Augmentation (All Images)
+🥇 Phase 2 No Augmentation (All Images)
    Val mAP@0.5:0.95: 0.9793
    Test mAP@0.5: 0.9950
    Train-Val Gap: 20.33%
    Convergence: Epoch 3
-   Total Score: 38.25
+   Total Score: 25.75
 
-🥉 Phase 2 No Augmentation (80 Images)
+🥈 Phase 2 No Augmentation (80 Images)
    Val mAP@0.5:0.95: 0.9781
    Test mAP@0.5: 0.9950
    Train-Val Gap: 25.27%
    Convergence: Epoch 3
-   Total Score: 47.25
+   Total Score: 31.75
 
-#4 Phase 2 Light Augmentation (80 Images)
-   Val mAP@0.5:0.95: 0.9781
+🥉 Phase 2 Full Augmentation (All Images)
+   Val mAP@0.5:0.95: 0.9527
    Test mAP@0.5: 0.9950
-   Train-Val Gap: 25.13%
-   Convergence: Epoch 6
-   Total Score: 52.75
-
-#5 Phase 2 Light Augmentation (40 Images)
-   Val mAP@0.5:0.95: 0.9739
-   Test mAP@0.5: 0.9950
-   Train-Val Gap: 38.56%
-   Convergence: Epoch 16
-   Total Score: 65.75
-
-#6 Phase 2 Geo Augmentation (All Images)
-   Val mAP@0.5:0.95: 0.9779
-   Test mAP@0.5: 0.9950
-   Train-Val Gap: 90.02%
+   Train-Val Gap: 15.48%
    Convergence: Epoch 3
-   Total Score: 71.25
+   Total Score: 39.75
 
-#7 Phase 2 Geo Augmentation (80 Images)
-   Val mAP@0.5:0.95: 0.9317
-   Test mAP@0.5: 0.9950
-   Train-Val Gap: 19.81%
-   Convergence: Epoch 7
-   Total Score: 72.75
-
-#8 Phase 2 No Augmentation (40 Images)
+#4 Phase 2 No Augmentation (40 Images)
    Val mAP@0.5:0.95: 0.9697
    Test mAP@0.5: 0.9950
    Train-Val Gap: 41.79%
    Convergence: Epoch 15
-   Total Score: 72.75
+   Total Score: 40.75
 
-#9 Phase 2 Light Augmentation (20 Images)
-   Val mAP@0.5:0.95: 0.9641
-   Test mAP@0.5: 0.9950
-   Train-Val Gap: 52.60%
-   Convergence: Epoch 22
-   Total Score: 82.75
-
-#10 Phase 2 No Augmentation (20 Images)
+#5 Phase 2 No Augmentation (20 Images)
    Val mAP@0.5:0.95: 0.9586
    Test mAP@0.5: 0.9950
    Train-Val Gap: 62.05%
    Convergence: Epoch 29
-   Total Score: 87.75
+   Total Score: 48.25
 
-#11 Phase 2 Geo Augmentation (40 Images)
-   Val mAP@0.5:0.95: 0.9264
+#6 Phase 2 Full Augmentation (80 Images)
+   Val mAP@0.5:0.95: 0.8935
    Test mAP@0.5: 0.9950
-   Train-Val Gap: 1206.63%
-   Convergence: Epoch 14
-   Total Score: 97.75
+   Train-Val Gap: 476.24%
+   Convergence: Epoch 18
+   Total Score: 60.75
 
-#12 Phase 2 Geo Augmentation (20 Images)
-   Val mAP@0.5:0.95: 0.8822
+#7 Phase 2 Full Augmentation (40 Images)
+   Val mAP@0.5:0.95: 0.8934
    Test mAP@0.5: 0.9950
-   Train-Val Gap: 45.27%
-   Convergence: Epoch 25
-   Total Score: 97.75
+   Train-Val Gap: 190.28%
+   Convergence: Epoch 22
+   Total Score: 61.75
+
+#8 Phase 2 Full Augmentation (20 Images)
+   Val mAP@0.5:0.95: 0.8677
+   Test mAP@0.5: 0.9950
+   Train-Val Gap: 406.53%
+   Convergence: Epoch 29
+   Total Score: 69.25
 
 ================================================================================
 KEY INSIGHTS
 ================================================================================
 
-⚠️  12 experiment(s) show high train-val gap (>15%):
-   • Phase 2 Light Augmentation (All Images): 18.42%
+⚠️  8 experiment(s) show high train-val gap (>15%):
    • Phase 2 No Augmentation (All Images): 20.33%
    • Phase 2 No Augmentation (80 Images): 25.27%
-   • Phase 2 Light Augmentation (80 Images): 25.13%
-   • Phase 2 Light Augmentation (40 Images): 38.56%
-   • Phase 2 Geo Augmentation (All Images): 90.02%
-   • Phase 2 Geo Augmentation (80 Images): 19.81%
+   • Phase 2 Full Augmentation (All Images): 15.48%
    • Phase 2 No Augmentation (40 Images): 41.79%
-   • Phase 2 Light Augmentation (20 Images): 52.60%
    • Phase 2 No Augmentation (20 Images): 62.05%
-   • Phase 2 Geo Augmentation (40 Images): 1206.63%
-   • Phase 2 Geo Augmentation (20 Images): 45.27%
+   • Phase 2 Full Augmentation (80 Images): 476.24%
+   • Phase 2 Full Augmentation (40 Images): 190.28%
+   • Phase 2 Full Augmentation (20 Images): 406.53%
 
-📊 Average convergence: Epoch 12.2
-⚡ Fastest convergence: Phase 2 Light Augmentation (All Images) (Epoch 3)
+📊 Average convergence: Epoch 15.2
+⚡ Fastest convergence: Phase 2 No Augmentation (All Images) (Epoch 3)
 
 🎯 Average val-test gap: 0.00%
-🏅 Best generalization: Phase 2 Light Augmentation (All Images) (0.00% gap)
+🏅 Best generalization: Phase 2 No Augmentation (All Images) (0.00% gap)
 
 ================================================================================
 RECOMMENDATION FOR SUBSEQUENT PHASES
 ================================================================================
 
-Use 'Phase 2 Light Augmentation (All Images)' configuration for:
+Use 'Phase 2 No Augmentation (All Images)' configuration for:
   • Phase 1B: Transfer Learning Strategy
   • Phase 2: Augmentation Validation
   • Phase 3: Data Efficiency
