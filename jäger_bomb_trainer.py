@@ -1,212 +1,44 @@
-from configs import TrainingConfig, SaveConfig
+from configs import TrainerConfig, TrainerState
 import torch
 import numpy as np
 from pathlib import Path
-from utils import convert_to_python_types, xywh_to_xyxy
+from torch import nn
+from utils import xywh_to_xyxy
 from jäger_bomb_visualizer import JägerBombVisualizer
-from jäger_bomb_logger import JägerBombLogger
-import json
 from jäger_bomb_metrics import JägerBombMetrics
 from ultralytics.models import YOLO
 from jäger_bomb_metrics import JägerBombMetrics
 from datetime import datetime
 import click
+import traceback
 
 class JägerBombTrainer:
-    def __init__(self, cfg: TrainingConfig, save_cfg : SaveConfig):
+    def __init__(self, cfg: TrainerConfig, state : TrainerState):
         self.cfg = cfg
-        self.save_cfg = save_cfg
-        
-        # Initialize AMP (Automatic Mixed Precision) scaler for better training
-        if torch.cuda.is_available():
-            self.scaler = torch.amp.GradScaler('cuda', enabled=True)
-            self.amp = True
-        else:
-            self.scaler = torch.amp.GradScaler('cpu', enabled=False)
-            self.amp = False
-        
-        # Initialize metrics tracker
+        self.torch_model : nn.Module = state.model.model
+        self.state = state
+        self._init_grad_scaler()
         self._init_metrics()
         self.visualizer = JägerBombVisualizer(self.metrics.save_dir)
+
+    def _init_grad_scaler(self):
+        """Initialize gradient scaler for mixed precision training."""
+        enable = self.cfg.device.startswith('cuda')
+        self.scaler = torch.amp.GradScaler(self.cfg.device, enabled=enable)
     
     def _init_metrics(self):
         """Initialize metrics tracking."""
-        
-        # Get class names from model
-        names = getattr(self.cfg.yolo_model, 'names', {0: "class0", 1: "class1"})
-        if isinstance(names, list):
-            names = {i: n for i, n in enumerate(names)}
-        
-        # Create unique save directory with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        experiment_name = self.cfg.experiment_name
+        save_dir = Path("experiments") / experiment_name / "runs" / f"train_{timestamp}"
         
-        # Check if running an experiment (config loaded from experiments/ folder)
-        experiment_name = getattr(self.cfg, 'experiment_name', None)
-        if experiment_name:
-            # Save under the experiment folder
-            save_dir = Path("experiments") / experiment_name / "runs" / f"train_{timestamp}"
-        else:
-            # Default runs folder
-            save_dir = Path("runs") / f"train_{timestamp}"
-        
+        # FIX ME: DOES THIS NAME STUFF WORK AS EXPECTED?
         self.metrics = JägerBombMetrics(
-            names=names,
+            names=self.state.model.names,
             save_dir=str(save_dir),
             device=self.cfg.device
         )
         click.secho(f"[SUCCESS] Metrics tracking initialized → {save_dir}", fg="green")
-        
-        # Store config parameters for logging
-        self.config_params = getattr(self.cfg, 'config_params', None)
-    
-    @torch.no_grad()
-    def _evaluate_test_set(self):
-        """Evaluate best.pt model on test dataset and save results."""
-        
-        # Load best model
-        best_model_path = Path(self.metrics.save_dir) / "weights" / "best.pt"
-        if not best_model_path.exists():
-            click.secho(f"[WARNING] best.pt not found at {best_model_path}, skipping test evaluation", fg="yellow")
-            return
-        
-        click.echo(f"[INFO] Loading best model from {best_model_path}...", fg="blue")
-        test_model = YOLO(str(best_model_path))
-        test_model.model.eval()
-        test_model.model.to(self.cfg.device)
-        
-        # Check if test dataloader exists
-        if not hasattr(self.cfg, 'test_dataloader') or self.cfg.test_dataloader is None:
-            click.secho("[WARNING] No test dataloader configured, skipping test evaluation", fg="yellow")
-            return
-        
-        # Initialize metrics for test set
-        names = getattr(self.cfg.yolo_model, 'names', {0: "class0", 1: "class1"})
-        if isinstance(names, list):
-            names = {i: n for i, n in enumerate(names)}
-        
-        test_metrics = JägerBombMetrics(
-            names=names,
-            save_dir=str(Path(self.metrics.save_dir) / "test_results"),
-            device=self.cfg.device
-        )
-        
-        click.echo("Running inference on test set...")
-        test_box = 0
-        test_cls = 0
-        test_dfl = 0
-        test_spatial = 0
-        count = 0
-        
-        for X_test, y_test in self.cfg.test_dataloader:
-            X_test, y_test = X_test.to(self.cfg.device), y_test.to(self.cfg.device)
-            
-            batch = self._prepare_batch_dict(X_test, y_test)
-            
-            # Get predictions
-            pred_test = test_model.model(X_test)
-            
-            # Compute loss (optional, for comparison)
-            _, last_loss = self.cfg.loss_fn(pred_test, batch)
-            loss_values = last_loss.cpu().numpy().round(3)
-            
-            if len(loss_values) == 4:
-                box_loss, cls_loss, dfl_loss, spatial_loss = loss_values
-                test_spatial += spatial_loss
-            else:
-                box_loss, cls_loss, dfl_loss = loss_values
-            
-            test_box += box_loss
-            test_cls += cls_loss
-            test_dfl += dfl_loss
-            count += 1
-            
-            # Update metrics with predictions
-            img_h, img_w = X_test.shape[2], X_test.shape[3]
-            
-            all_gt_cls = []
-            all_gt_bboxes = []
-            all_batch_idx = []
-            
-            for bi in range(y_test.shape[0]):
-                img_targets = y_test[bi][y_test[bi, :, 0] != -1]
-                if img_targets.shape[0] > 0:
-                    cls = img_targets[:, 0]
-                    bboxes_xywh = img_targets[:, 1:]
-                    bboxes_xyxy = self._xywh_to_xyxy(bboxes_xywh, img_w, img_h)
-                    
-                    all_gt_cls.append(cls)
-                    all_gt_bboxes.append(bboxes_xyxy)
-                    all_batch_idx.extend([bi] * cls.shape[0])
-            
-            if len(all_gt_cls) > 0:
-                metrics_batch = {
-                    'cls': torch.cat(all_gt_cls),
-                    'bboxes': torch.cat(all_gt_bboxes),
-                    'batch_idx': torch.tensor(all_batch_idx, device=y_test.device)
-                }
-            else:
-                metrics_batch = {
-                    'cls': torch.empty(0, device=y_test.device),
-                    'bboxes': torch.empty((0, 4), device=y_test.device),
-                    'batch_idx': torch.empty(0, dtype=torch.long, device=y_test.device)
-                }
-            
-            test_metrics.update(pred_test, metrics_batch)
-        
-        # Compute average losses
-        avg_test_losses = {
-            'box': test_box / count,
-            'cls': test_cls / count,
-            'dfl': test_dfl / count,
-            'spatial': test_spatial / count,
-            'total': (test_box + test_cls + test_dfl + test_spatial) / count
-        }
-        
-        click.echo(
-            f"TEST SET LOSSES: "
-            f"Box: {avg_test_losses['box']:.4f}, "
-            f"Cls: {avg_test_losses['cls']:.4f}, "
-            f"DFL: {avg_test_losses['dfl']:.4f}, "
-            f"Spatial: {avg_test_losses['spatial']:.4f}, "
-            f"Total: {avg_test_losses['total']:.4f}"
-        )
-        
-        # Compute detection metrics
-        try:
-            det_metrics = test_metrics.compute_metrics(plot=True)
-            click.echo(
-                f"TEST SET METRICS: "
-                f"P: {det_metrics['precision']:.4f}, "
-                f"R: {det_metrics['recall']:.4f}, "
-                f"mAP50: {det_metrics['mAP50']:.4f}, "
-                f"mAP50-95: {det_metrics['mAP50-95']:.4f}"
-            )
-            
-            # Plot confusion matrices for test set
-            try:
-                test_metrics.confusion_matrix.plot(normalize=True, save_dir=str(Path(self.metrics.save_dir) / "test_results"))
-                test_metrics.confusion_matrix.plot(normalize=False, save_dir=str(Path(self.metrics.save_dir) / "test_results"))
-                click.secho("[SUCCESS] Test confusion matrices generated", fg="green")
-            except Exception as e:
-                click.secho(f"[ERROR] Could not generate test confusion matrices: {e}", fg="red")
-            
-        except Exception as e:
-            det_metrics = {'precision': 0, 'recall': 0, 'mAP50': 0, 'mAP50-95': 0}
-            click.secho(f"[ERROR] Could not compute test metrics: {e}", fg="red")
-        
-        # Save test results to JSON (convert numpy types to native Python)
-        
-        test_results = {
-            'losses': convert_to_python_types(avg_test_losses),
-            'metrics': convert_to_python_types(det_metrics),
-            'model': str(best_model_path)
-        }
-        
-        results_path = Path(self.metrics.save_dir) / "test_results.json"
-        with open(results_path, 'w') as f:
-            json.dump(test_results, f, indent=2)
-        
-        click.secho(f"Test results saved → {results_path}", fg="green")
     
     @torch.no_grad()
     def _validate(self, epoch):
@@ -218,20 +50,17 @@ class JägerBombTrainer:
         val_dfl = 0
         val_spatial = 0
         count = 0
-        
-        # Reset metrics for this validation run
+
         self.metrics.reset()
         
-        for X_val, y_val in self.cfg.val_dataloader:
+        for X_val, y_val in self.state.val_loader:
             X_val, y_val = X_val.to(self.cfg.device), y_val.to(self.cfg.device)
             
             batch = self._prepare_batch_dict(X_val, y_val)
             
-            # Get predictions
-            pred_val =  self.cfg.model(X_val)
+            pred_val =  self.torch_model(X_val)
             
-            # Compute loss
-            _, last_loss = self.cfg.loss_fn(pred_val, batch)
+            _, last_loss = self.state.loss_fn(pred_val, batch)
             loss_values = last_loss.cpu().numpy().round(3)
             
             # Handle both standard loss (3 elements) and spatial loss (4 elements)
@@ -287,7 +116,6 @@ class JägerBombTrainer:
                 self.metrics.update(pred_val, metrics_batch)
             except Exception as e:
                 click.secho(f"[ERROR] Metrics update failed: {e}", fg="red")
-                import traceback
                 traceback.print_exc()
         
         # Compute average losses
@@ -335,57 +163,51 @@ class JägerBombTrainer:
 
     def _save_model(self, epoch, is_best=False):
         """Save model checkpoint."""
-        # Save to experiment-specific directory if available
-        if hasattr(self.metrics, 'save_dir'):
-            save_dir = Path(self.metrics.save_dir) / "weights"
-        else:
-            save_dir = Path(self.save_cfg.save_path).parent
-        
+        save_dir = Path(self.metrics.save_dir) / "weights"
         save_dir.mkdir(parents=True, exist_ok=True)
         
-        # Save last.pt (always)
         last_path = save_dir / "last.pt"
-        self.cfg.yolo_model.save(str(last_path))
+        self.state.model.save(str(last_path))
         
         # Save best.pt (only when validation improves)
         if is_best:
             best_path = save_dir / "best.pt"
-            self.cfg.yolo_model.save(str(best_path))
+            self.state.model.save(str(best_path))
             click.secho(f"[SUCCESS] Model saved at epoch {epoch} → {best_path}", fg="green")
         else:
             click.secho(f"[INFO] Checkpoint saved → {last_path}", fg="blue")  
 
+    def _reset_train_losses(self):
+        return {'box': 0, 'cls': 0, 'dfl': 0, 'spatial': 0}
+
+
     def train(self):
-        self.cfg.model.to(self.cfg.device)
+        self.torch_model.to(self.cfg.device)
         best_loss = np.inf
         count = 0
         early_stoppage_count = 9999999999
         
-        JägerBombLogger.log_config_params(self.metrics.save_dir, self.cfg, self.config_params)
-        
-        # Warmup settings (like Ultralytics)
         warmup_epochs = 3.0
-        nb = len(self.cfg.train_dataloader)
-        nw = max(round(warmup_epochs * nb), 100)  # number of warmup iterations
+        train_loader_len = len(self.state.train_loader)
+        nr_warmup_iterations = max(round(warmup_epochs * train_loader_len), 100)
         
         # Track training losses per epoch
-        epoch_train_losses = {'box': 0, 'cls': 0, 'dfl': 0, 'spatial': 0}
+        epoch_train_losses = self._reset_train_losses()
         
         for epoch in range(self.cfg.epochs):
-            self.cfg.model.train(True)
+            self.state.model.train(True)
             
-            # Reset epoch training losses
-            epoch_train_losses = {'box': 0, 'cls': 0, 'dfl': 0, 'spatial': 0}
+            epoch_train_losses = self._reset_train_losses()
             batch_count = 0
             
             # Track first batch for visualization
             first_batch_saved = False
             
-            for batch_idx, (X, y) in enumerate(self.cfg.train_dataloader):
+            for batch_idx, (X, y) in enumerate(self.state.train_loader):
                 # Warmup learning rate for first few epochs
-                ni = batch_idx + nb * epoch  # number integrated batches
-                if ni <= nw:
-                    xi = [0, nw]  # warmup iteration range
+                ni = batch_idx + train_loader_len * epoch  # number integrated batches
+                if ni <= nr_warmup_iterations:
+                    xi = [0, nr_warmup_iterations]  # warmup iteration range
                     # Warmup: gradually increase LR from 0.1 to target
                     for j, x in enumerate(self.cfg.optimizer.param_groups):
                         x['lr'] = np.interp(ni, xi, [0.1 * x['initial_lr'], x['initial_lr']])
@@ -400,9 +222,9 @@ class JägerBombTrainer:
                     first_batch_saved = True
                 
                 # Forward pass with AMP
-                with torch.amp.autocast(device_type='cuda' if self.amp else 'cpu', enabled=self.amp):
-                    pred = self.cfg.model.forward(X)
-                    batch_loss, last_loss = self.cfg.loss_fn(pred, batch)
+                with torch.amp.autocast(device_type=self.cfg.device, enabled=self.scaler.is_enabled()):
+                    pred = self.torch_model.forward(X)
+                    batch_loss, last_loss = self.state.loss_fn(pred, batch)
                 
                 loss_values = last_loss.detach().cpu().numpy().round(3)
                 
@@ -422,15 +244,15 @@ class JägerBombTrainer:
                 batch_count += 1
                 
                 # Backward pass with gradient scaling
-                self.cfg.optimizer.zero_grad()
+                self.state.optimizer.zero_grad()
                 self.scaler.scale(loss).backward()
                 
                 # Gradient clipping (prevents exploding gradients)
-                self.scaler.unscale_(self.cfg.optimizer)
-                torch.nn.utils.clip_grad_norm_(self.cfg.model.parameters(), max_norm=10.0)
+                self.scaler.unscale_(self.state.optimizer)
+                torch.nn.utils.clip_grad_norm_(self.torch_model.parameters(), max_norm=10.0)
                 
                 # Optimizer step with scaler
-                self.scaler.step(self.cfg.optimizer)
+                self.scaler.step(self.state.optimizer)
                 self.scaler.update()
                 
 
@@ -510,7 +332,7 @@ class JägerBombTrainer:
         self.metrics.finalize()
         
         # Evaluate best model on test set
-        click.secho("\n[INFO] Evaluating best model on test set...", fg="blue")
-        self._evaluate_test_set()
+        # click.secho("\n[INFO] Evaluating best model on test set...", fg="blue")
+        # self._evaluate_test_set()
         
         click.secho("[SUCCESS] Training complete!", fg="green")

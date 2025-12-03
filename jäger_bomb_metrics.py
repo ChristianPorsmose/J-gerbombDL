@@ -7,7 +7,7 @@ import csv
 from pathlib import Path
 import numpy as np
 import torch
-
+from ultralytics.utils.nms import non_max_suppression
 from ultralytics.utils.metrics import ConfusionMatrix, DetMetrics, box_iou
 
 
@@ -81,7 +81,6 @@ class JägerBombMetrics:
             conf_thres: Confidence threshold for predictions
             iou_thres: IoU threshold for NMS
         """
-        from ultralytics.utils.nms import non_max_suppression
         
         # Get raw predictions
         if isinstance(preds, (list, tuple)):

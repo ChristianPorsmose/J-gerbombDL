@@ -1,0 +1,38 @@
+{
+    'experiment_name': 'phase1a_adamw_standard',
+
+    'model': 'custom_yolo.yaml',
+
+    'paths': {
+        'train': '/home/dl01e25/dataset_final_boxes_yolo/train.txt',
+        'val': '/home/dl01e25/dataset_final_boxes_yolo/val.txt',
+        'test': '/home/dl01e25/dataset_final_boxes_yolo/test.txt',
+    },
+
+    'training': {
+        'batch_size': 8,
+        'epochs': 100,
+        'log_interval': 10,
+        'save_interval': 30,
+        'save_path': 'weights',
+    },
+
+    'optimizer': {
+        'type': 'AdamW',
+        'lr': 0.001,
+        'lr_scheduler': 'fixed',
+        'weight_decay': 0.0005,
+        'momentum': 0.9
+    },
+
+    'freeze': {
+        'backbone_layers': 0,
+        'dfl': False
+    },
+
+    'augmentation': 'none',
+    'dataset_size': 1.0,
+    'use_ema': False,
+
+    'loss_type': 'standard'
+}
