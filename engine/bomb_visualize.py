@@ -36,7 +36,7 @@ def visualize_batch(images, batch_dict,save_dir, predictions=None, epoch=0, is_t
     fig, axes = plt.subplots(1, batch_size, figsize=(5*batch_size, 5))
     if batch_size == 1:
         axes = [axes]
-    colors = {0: 'red', 1: 'blue'}
+    colors_dict = {0: 'red', 1: 'blue'}
     labels = {0: 'shot', 1: 'cup'}
     
     for idx in range(batch_size):
@@ -53,11 +53,11 @@ def visualize_batch(images, batch_dict,save_dir, predictions=None, epoch=0, is_t
         
         img_mask = batch_dict['batch_idx'] == idx
         if img_mask.any():
-            _draw_ground_truth_boxes(batch_dict, colors, labels, ax, h, w, img_mask)
+            _draw_ground_truth_boxes(batch_dict, colors_dict, labels, ax, h, w, img_mask)
         
         if predictions is not None:
             # Process predictions
-            _draw_predictions(predictions, colors, labels, idx, ax)
+            _draw_predictions(predictions, colors_dict, labels, idx, ax)
         
         ax.set_title(f'Image {idx}', fontsize=10)
     
@@ -76,7 +76,7 @@ def visualize_batch(images, batch_dict,save_dir, predictions=None, epoch=0, is_t
     
     log(f"Saved {split} visualization → {save_path}")
 
-def _draw_predictions(predictions, colors, labels, idx, ax):
+def _draw_predictions(predictions, colors_dict, labels, idx, ax):
     pred_boxes = predictions[0][idx]
             
     if len(pred_boxes) > 0:
@@ -91,12 +91,12 @@ def _draw_predictions(predictions, colors, labels, idx, ax):
                 continue
                     
             rect = Rectangle((x1, y1), x2-x1, y2-y1,
-                                   linewidth=2, edgecolor=colors.get(cls, 'green'),
+                                   linewidth=2, edgecolor=colors_dict.get(cls, 'green'),
                                    facecolor='none', linestyle='--',
                                    label=f'Pred {labels.get(cls, "?")} {conf:.2f}')
             ax.add_patch(rect)
 
-def _draw_ground_truth_boxes(batch_dict, colors, labels, ax, h, w, img_mask):
+def _draw_ground_truth_boxes(batch_dict, colors_dict, labels, ax, h, w, img_mask):
     gt_classes = batch_dict['cls'][img_mask].cpu().numpy()
     gt_bboxes = batch_dict['bboxes'][img_mask].cpu().numpy()  # normalized xywh
     for cls, bbox in zip(gt_classes, gt_bboxes):
@@ -108,7 +108,7 @@ def _draw_ground_truth_boxes(batch_dict, colors, labels, ax, h, w, img_mask):
         box_h = height * h
         cls = int(cls)
         rect = Rectangle((x1, y1), box_w, box_h, 
-                               linewidth=2, edgecolor=colors[cls], 
+                               linewidth=2, edgecolor=colors_dict[cls], 
                                facecolor='none', linestyle='-',
                                label=f'GT {labels[cls]}')
         ax.add_patch(rect)
@@ -122,7 +122,7 @@ def visualize_predictions(epoch, model, data_loader, save_dir : Path):
     save_dir = save_dir / "visualizations" / f"epoch{epoch:03d}_predictions"
     save_dir.mkdir(parents=True, exist_ok=True)
     
-    colors = {0: RED, 1: BLUE}
+    colors_dict = {0: RED, 1: BLUE}
     labels = {0: 'shot', 1: 'cup'}
     
     log(f"Generating prediction visualizations for epoch {epoch}...")
@@ -157,9 +157,9 @@ def visualize_predictions(epoch, model, data_loader, save_dir : Path):
                             x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
                             cls = int(cls)
                             
-                            _draw_box(colors, img, x1, y1, x2, y2, cls)
+                            _draw_box(colors_dict, img, x1, y1, x2, y2, cls)
                             
-                            _draw_label(colors, labels, img, x1, y1, conf, cls)
+                            _draw_label(colors_dict, labels, img, x1, y1, conf, cls)
                 
                 # Save image
                 save_path = save_dir / f"batch{batch_idx:03d}_img{img_idx:02d}.png"
@@ -171,12 +171,12 @@ def visualize_predictions(epoch, model, data_loader, save_dir : Path):
     
     log(f"Saved prediction visualizations → {save_dir}")
 
-def _draw_box(colors, img, x1, y1, x2, y2, cls):
-    cv2.rectangle(img, (x1, y1), (x2, y2), colors.get(cls, GREEN, 2))
+def _draw_box(colors_dict, img, x1, y1, x2, y2, cls):
+    cv2.rectangle(img, (x1, y1), (x2, y2), colors_dict.get(cls, GREEN), 2)
 
-def _draw_label(colors, labels, img, x1, y1, conf, cls):
+def _draw_label(colors_dict, labels, img, x1, y1, conf, cls):
     label_text = f'{labels.get(cls, "?")} {conf:.2f}'
     (tw, th), _ = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-    cv2.rectangle(img, (x1, y1-th-4), (x1+tw, y1), colors.get(cls,GREEN), -1)
+    cv2.rectangle(img, (x1, y1-th-4), (x1+tw, y1), colors_dict.get(cls,GREEN), -1)
     cv2.putText(img, label_text, (x1, y1-2), 
                                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, WHITE, 1)

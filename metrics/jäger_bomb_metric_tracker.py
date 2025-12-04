@@ -124,8 +124,6 @@ class JägerBombMetricTracker:
             conf_thres: Confidence threshold for predictions
             iou_thres: IoU threshold for NMS
         """
-        print("DEBUG !!!!!")
-        
         # Get raw predictions
         if isinstance(preds, (list, tuple)):
             preds = preds[0]

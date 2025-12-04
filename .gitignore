@@ -4,3 +4,4 @@ __pycache__/
 .ipynb_checkpoints/
 **/__pycache__/
 experiments_results/
+venv/
