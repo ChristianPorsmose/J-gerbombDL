@@ -8,8 +8,7 @@ class ModelConfig:
 @dataclass
 class LossConfig:
     type: str
-    lamda_rate: Optional[float] = None
-    proportion: Optional[float] = None
+    lambda_rate: Optional[float] = None
 
 @dataclass
 class PathsConfig:

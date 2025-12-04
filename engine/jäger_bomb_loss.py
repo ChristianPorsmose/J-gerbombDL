@@ -7,11 +7,9 @@ SHOT_IDX = 0
 CUP_IDX = 1
 
 class JägerBombLoss(v8DetectionLoss):
-    def __init__(self, model, tal_topk=10, lamda_rate=0.001): #proportion=0.5):
+    def __init__(self, model, tal_topk=10, lamda_rate=0.001): 
         super().__init__(model, tal_topk)
         self.lamda_rate = lamda_rate
-        #self.proportion = proportion
-        # Define your class indices here
 
     def __call__(self, preds, batch):
         """
@@ -30,7 +28,7 @@ class JägerBombLoss(v8DetectionLoss):
         ) * self.lamda_rate
 
         loss_vector = torch.zeros(4, device=self.device)
-        loss_vector[:3] = loss  # box, cls, dfl
+        loss_vector[:3] = loss
         loss_vector[3] = containment_loss
         detached_vector = torch.zeros_like(loss_vector)
         detached_vector[:3] = detached_losses
@@ -80,46 +78,37 @@ class JägerBombLoss(v8DetectionLoss):
 
             # Predicted boxes at positives
             pos_pred_boxes = pred_bboxes[b, pos]  # (M, 4)
-            # Target boxes at positives (closest GT assigned)
-            pos_tgt_boxes = target_bboxes[b, pos]  # (M, 4)
+            
             # Class scores at positives
             pos_scores = target_scores[b, pos]     # (M, C)
             if pos_scores.numel() == 0:
                 continue
 
-            # Class ids from target scores (argmax over classes with non-zero score)
             cls_ids = pos_scores.argmax(dim=1)     # (M,)
 
-            # Split shots vs cups
             shot_mask = cls_ids == SHOT_IDX
             cup_mask = cls_ids == CUP_IDX
 
             shot_boxes = pos_pred_boxes[shot_mask]
             cup_boxes = pos_pred_boxes[cup_mask]
 
-            if shot_boxes.shape[0] == 0 or cup_boxes.shape[0] == 0:
-                continue
-
-            # Centers
-            shot_centers = (shot_boxes[:, :2] + shot_boxes[:, 2:]) / 2
-            cup_centers = (cup_boxes[:, :2] + cup_boxes[:, 2:]) / 2
-
-            dists = torch.cdist(shot_centers, cup_centers, p=2)
-
-            # Shot -> nearest cup
-            _, nearest_cup_idx = dists.min(dim=1)
-            nearest_cups = cup_boxes[nearest_cup_idx]
-            inter1 = self._box_intersection(shot_boxes, nearest_cups)
-            shot_area = (shot_boxes[:, 2] - shot_boxes[:, 0]) * (shot_boxes[:, 3] - shot_boxes[:, 1])
-            loss1 = (1.0 - (inter1 / (shot_area + 1e-6))).clamp(min=0).mean()
-
-            # Cup -> nearest shot
-            _, nearest_shot_idx = dists.min(dim=0)
-            nearest_shots = shot_boxes[nearest_shot_idx]
-            inter2 = self._box_intersection(nearest_shots, cup_boxes)
-            shot_area2 = (nearest_shots[:, 2] - nearest_shots[:, 0]) * (nearest_shots[:, 3] - nearest_shots[:, 1])
-            loss2 = (1.0 - (inter2 / (shot_area2 + 1e-6))).clamp(min=0).mean()
-
-            total += (loss1 + loss2) / 2.0
+            shot_nearest_cup_loss = self._nearest_loss(shot_boxes, cup_boxes)
+            cup_nearest_shot_loss = self._nearest_loss(cup_boxes, shot_boxes)
+            total += (shot_nearest_cup_loss + cup_nearest_shot_loss) / 2.0
 
         return total / B
+
+    def _nearest_loss(self, primary_boxes, candidate_boxes):
+        if primary_boxes.shape[0] == 0 or candidate_boxes.shape[0] == 0:
+            return torch.tensor(0.0, device=primary_boxes.device)
+        
+        centers1 = (primary_boxes[:, :2] + primary_boxes[:, 2:]) / 2
+        centers2 = (candidate_boxes[:, :2] + candidate_boxes[:, 2:]) / 2
+        dists = torch.cdist(centers1, centers2, p=2)
+
+        _, nearest_idx = dists.min(dim=1)
+        nearest_boxes = candidate_boxes[nearest_idx]
+        
+        inter = self._box_intersection(primary_boxes, nearest_boxes)
+        area = (primary_boxes[:, 2] - primary_boxes[:, 0]) * (primary_boxes[:, 3] - primary_boxes[:, 1])
+        return (1.0 - (inter / (area + 1e-6))).clamp(min=0).mean()

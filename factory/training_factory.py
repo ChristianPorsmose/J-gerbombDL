@@ -140,9 +140,9 @@ class TrainingFactory:
 
     def create_loss_func(self, torch_model : torch.nn.Module, loss_type : LossConfig) -> LossFunc:
         torch_model.args = SimpleNamespace(box=7.5, cls=0.5, dfl=1.5)
-        if loss_type.type == "spatial_consistency":
+        if loss_type.type == "spatial":
             log_info("Using spatial consistency loss (JägerBombLoss)")
-            return JägerBombLoss(torch_model, lamda_rate=1)
+            return JägerBombLoss(torch_model, lamda_rate=loss_type.lambda_rate)
         log_info("Using standard YOLO loss (v8DetectionLoss)")
         return v8DetectionLoss(torch_model)
 

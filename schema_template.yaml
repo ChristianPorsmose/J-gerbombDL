@@ -37,6 +37,7 @@
     'dataset_size': 1,
 
     'loss': {
-        type: 'none',
+        type: 'spatial',
+        lambda_rate: 1
     }
 }
