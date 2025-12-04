@@ -56,8 +56,6 @@ class JägerBombTrainer:
         loss = self._evaluate(None,self.state.test_loader, "TEST RESULTS")
         results_path = self.metric_tracker.save_dir / "test_results.json"
 
-        print("LOSS DATA:", asdict(loss))
-        print("TYPES:", {k: type(v) for k, v in asdict(loss).items()})
 
         # FIX ME: THIS IS TOO HACKY, LOSSCOMPONENT SHOULD ALWAYS BE FLOATS
         loss_dict = {k: float(v) for k, v in asdict(loss).items()}
@@ -93,7 +91,7 @@ class JägerBombTrainer:
             img_h, img_w = X_val.shape[2], X_val.shape[3]
             
             metrics_batch = self.metric_tracker.prepare_batch(y_val, img_h, img_w)
-            
+
             self.metric_tracker.update(pred_val, metrics_batch)
         
         average_loss = val_loss / count
@@ -166,6 +164,7 @@ class JägerBombTrainer:
             batch_count += self.train_one_epoch(train_loader_len, nr_warmup_iterations, epoch_train_losses, epoch, first_batch_saved) # FIX ME
             
             average_train_loss = epoch_train_losses / batch_count
+
             
             val_losses = self._evaluate(epoch, self.state.val_loader)
             # Compute detection metrics and generate plots every N epochs or at end
@@ -182,6 +181,7 @@ class JägerBombTrainer:
             current_lr = self.state.optimizer.param_groups[0]['lr']
             log(f"Learning rate: {current_lr:.6f}")
             
+
             self.metrics_logger.log_batch_result(
                 batchResult=BatchResult(
                     train_loss=average_train_loss,
@@ -222,7 +222,7 @@ class JägerBombTrainer:
         return count
 
 
-    def train_one_epoch(self, train_loader_len, nr_warmup_iterations, epoch_train_loss : LossComponent, epoch, first_batch_saved):
+    def train_one_epoch(self, train_loader_len, nr_warmup_iterations, epoch_train_losses : LossComponent, epoch, first_batch_saved):
         batch_count = 0
         for batch_idx, (X, y) in enumerate(self.state.train_loader):
             
@@ -252,10 +252,10 @@ class JägerBombTrainer:
             new_loss = self._extract_loss_component(loss_values)
                 
             loss = batch_loss.sum()
-                
-            epoch_train_loss += new_loss
+
+            epoch_train_losses += new_loss
+
             batch_count += 1
-                
                 
             self.state.optimizer.zero_grad()
             self.scaler.scale(loss).backward()
@@ -269,6 +269,7 @@ class JägerBombTrainer:
 
             if batch_idx % self.cfg.log_interval == 0:
                 log_loss(epoch, new_loss, header=f"TRAIN — Batch {batch_idx} ")
+
         return batch_count
     
     def _prepare_batch_dict(self, images: torch.Tensor, targets: torch.Tensor) -> dict:

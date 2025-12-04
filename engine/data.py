@@ -50,6 +50,13 @@ class LossComponent:
             dfl=self.dfl + other.dfl,
             spatial=self.spatial + other.spatial
         )
+    
+    def __iadd__(self, other: 'LossComponent') -> 'LossComponent':
+        self.box += other.box
+        self.cls += other.cls
+        self.dfl += other.dfl
+        self.spatial += other.spatial
+        return self
 
 
 @dataclass
