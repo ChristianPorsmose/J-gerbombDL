@@ -1,16 +1,16 @@
 import click
 
-_colors = {
-    "debug": "bright_cyan",
-    "info": "blue",
-    "success": "green",
-    "warning": "yellow",
-    "error": "red",
-    "critical": "bright_red"
-}
+def log_info(msg: str):
+    click.secho(f"[INFO] {msg}", fg="blue")
 
-for level, color in _colors.items():
-    globals()[f"log_{level}"] = lambda msg, lvl=level, c=color: click.secho(f"[{lvl.upper()}] {msg}", fg=c)
+def log_success(msg: str):
+    click.secho(f"[SUCCESS] {msg}", fg="green")
 
-def log(message :str):
-    click.echo(message)
+def log_warning(msg: str):
+    click.secho(f"[WARNING] {msg}", fg="yellow")
+
+def log_error(msg: str):
+    click.secho(f"[ERROR] {msg}", fg="red")
+
+def log(message: str, *args, **kwargs):
+    click.echo(message, *args, **kwargs)

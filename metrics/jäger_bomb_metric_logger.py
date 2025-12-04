@@ -2,9 +2,9 @@
 
 import csv
 
-import click
 from engine.data import BatchResult
 from pathlib import Path
+from utils.echo import log
 
 class JägerBombMetricLogger:
     """
@@ -31,7 +31,7 @@ class JägerBombMetricLogger:
         Log epoch results to CSV and print to terminal.
         """ 
         metrics = batchResult.metrics
-        click.echo(
+        log(
             f"METRICS — Epoch {epoch}: "
             f"P: {metrics.precision:.4f}, "
             f"R: {metrics.recall:.4f}, "

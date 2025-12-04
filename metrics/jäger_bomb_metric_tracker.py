@@ -6,6 +6,7 @@ from ultralytics.utils.metrics import ConfusionMatrix, DetMetrics, box_iou
 import torch 
 from ultralytics.utils.nms import non_max_suppression
 import numpy as np
+from utils.echo import log, log_warning, log_info, log_error
 
 from utils.utils import xywh_to_xyxy
 
@@ -16,6 +17,7 @@ class JägerBombMetricTracker:
     def __init__(self, names,save_dir : Path):
         self.save_dir = save_dir
         self.names = names
+
         # IoU thresholds for mAP calculation
         self.iouv = torch.linspace(0.5, 0.95, 10)
         self.niou = self.iouv.numel() 
@@ -38,7 +40,6 @@ class JägerBombMetricTracker:
             if img_targets.shape[0] > 0:
                 cls = img_targets[:, 0]
                 bboxes_xywh = img_targets[:, 1:]
-                # Convert to xyxy pixel coordinates
                 bboxes_xyxy = xywh_to_xyxy(bboxes_xywh, img_w, img_h)
                 
                 all_gt_cls.append(cls)
@@ -165,20 +166,14 @@ class JägerBombMetricTracker:
                     })
                 continue
             
-            # Get predictions
-            pred_bboxes = pred[:, :4]
-            pred_conf = pred[:, 4]
-            pred_cls = pred[:, 5]
+            pred_bboxes, pred_conf, pred_cls = self.get_predictions(pred)
             
-            # Update confusion matrix
             pred_dict = {'bboxes': pred_bboxes, 'conf': pred_conf, 'cls': pred_cls}
             gt_dict = {'bboxes': gt_bboxes, 'cls': gt_cls}
-            self.confusion_matrix.process_batch(pred_dict, gt_dict, conf=0.25, iou_thres=0.45)
+            self.confusion_matrix.process_batch(pred_dict, gt_dict)
             
-            # Compute correct predictions (true positives)
             correct = self._process_batch(pred_bboxes, pred_cls, gt_bboxes, gt_cls)
             
-            # Update detection metrics
             stats_update = {
                 'tp': correct,
                 'conf': pred_conf.cpu().numpy(),
@@ -187,8 +182,13 @@ class JägerBombMetricTracker:
                 'target_img': np.full(nl, self.seen - 1) if nl else np.array([]),
             }
             
-            
             self.det_metrics.update_stats(stats_update)
+
+    def get_predictions(self, pred):
+        pred_bboxes = pred[:, :4]
+        pred_conf = pred[:, 4]
+        pred_cls = pred[:, 5]
+        return pred_bboxes,pred_conf,pred_cls
 
     def compute(self, plot: bool = True) -> Metrics:
         """
@@ -198,21 +198,20 @@ class JägerBombMetricTracker:
             plot: Whether to generate and save plots
         
         """
-
         has_stats = any(len(v) > 0 for v in self.det_metrics.stats.values())
         
         if not has_stats:
-            click.secho("[WARNING] No detection stats collected", fg="yellow")
+            log_warning("No detection stats collected")
             return Metrics()
         
         stats_summary = {k: len(v) for k, v in self.det_metrics.stats.items()}
-        click.secho(f"[INFO] Stats summary: {stats_summary}", fg="blue")
+        log_info(f"Stats summary: {stats_summary}")
         
         # FOR SOME REASON ULTRALYTICS PUT PLOTTING INSIDE PROCESS METHOD??
         try:
             self.det_metrics.process(save_dir=self.save_dir, plot=plot)
         except Exception as e:
-            click.secho(f"[ERROR] Error processing metrics: {e}", fg="red")
+            log_error(f"Error processing metrics: {e}")
             traceback.print_exc()
             return Metrics()
         

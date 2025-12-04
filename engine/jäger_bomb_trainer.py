@@ -13,6 +13,7 @@ from engine.bomb_visualize import visualize_batch, visualize_predictions
 from engine.data import BatchResult, LossComponent, TrainerConfig, TrainerState
 from engine.log_helpers import log_loss
 from ultralytics.models.yolo.model import YOLO
+from utils.echo import log_warning, log_info, log_success, log
 
 class JägerBombTrainer:
     def __init__(self, cfg: TrainerConfig, state : TrainerState):
@@ -45,9 +46,9 @@ class JägerBombTrainer:
     def test_best_model(self):
         best_model_path = self.metric_tracker.save_dir / "weights" / "best.pt"
         if not best_model_path.exists():
-            click.secho(f"[WARNING] best.pt not found at {best_model_path}, skipping test evaluation", fg="yellow")
+            log_warning(f"best.pt not found at {best_model_path}, skipping test evaluation")
             return
-        click.echo(f"[INFO] Loading best model from {best_model_path}...", fg="blue")
+        log_info(f"Loading best model from {best_model_path}...")
         test_model = YOLO(str(best_model_path))
         test_model.model.eval()
         test_model.model.to(self.device)
@@ -107,9 +108,9 @@ class JägerBombTrainer:
         if is_best:
             best_path = save_dir / "best.pt"
             self.state.model.save(str(best_path))
-            click.secho(f"[SUCCESS] Model saved at epoch {epoch} → {best_path}", fg="green")
+            log_success(f"Model saved at epoch {epoch} → {best_path}")
         else:
-            click.secho(f"[INFO] Checkpoint saved → {last_path}", fg="blue")  
+            log_info(f"Checkpoint saved → {last_path}")  
 
     def train(self):
         self.torch_model.to(self.device)
@@ -149,7 +150,7 @@ class JägerBombTrainer:
                 self.state.scheduler.step()
             
             current_lr = self.state.optimizer.param_groups[0]['lr']
-            click.echo(f"Learning rate: {current_lr:.6f}")
+            log(f"Learning rate: {current_lr:.6f}")
             
             self.metrics_logger.log_batch_result(
                 batchResult=BatchResult(
@@ -164,21 +165,17 @@ class JägerBombTrainer:
             count = self._save(best_loss, epoch, val_losses)
             
             if count >= EARLY_STOPPAGE_COUNT:
-                click.secho(f"[INFO] Early stopping at epoch {epoch}", fg="blue")
+                log_info(f"Early stopping at epoch {epoch}")
                 break
         
-        click.secho("\n[INFO] Generating final metrics and plots...", fg="blue")
+        log_info("[INFO] Generating final metrics and plots...")
         
         plot_all_metrics(
             confusion_matrix=self.metric_tracker.confusion_matrix,
             base_dir=Path(self.metric_tracker.save_dir)
         )
         
-        # Evaluate best model on test set
-        # click.secho("\n[INFO] Evaluating best model on test set...", fg="blue")
-        # self._evaluate_test_set()
-        
-        click.secho("[SUCCESS] Training complete!", fg="green")
+        log_success("Training complete!")
 
     def _save(self, best_loss : int, epoch: int, val_losses : LossComponent) -> int:
         curr_val_loss = val_losses.total()

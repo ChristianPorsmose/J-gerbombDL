@@ -17,7 +17,7 @@ from configs import (
 import random
 import tempfile
 import os
-import click
+from utils.echo import log, log_info
 
 def load_config(path: str) -> ExperimentConfig:
     with open(path, "r") as f:
@@ -34,23 +34,6 @@ def load_config(path: str) -> ExperimentConfig:
         dataset_size = cfg_dict["dataset_size"],
         loss_type = LossConfig(**cfg_dict["loss"])
     )
-
-def convert_to_python_types(obj):
-    """Recursively convert numpy/torch types to native Python types."""
-    if isinstance(obj, dict):
-        return {k: convert_to_python_types(v) for k, v in obj.items()}
-    elif isinstance(obj, (list, tuple)):
-        return [convert_to_python_types(item) for item in obj]
-    elif isinstance(obj, (np.integer, np.int32, np.int64)):
-        return int(obj)
-    elif isinstance(obj, (np.floating, np.float32, np.float64)):
-        return float(obj)
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()
-    elif hasattr(obj, 'item'):  # torch tensors
-        return obj.item()
-    else:
-        return obj
 
 def xywh_to_xyxy(bboxes: torch.Tensor, img_w: int, img_h: int) -> torch.Tensor:
     """Convert bboxes from normalized xywh to pixel xyxy format."""
@@ -77,17 +60,17 @@ def create_experiment_train_path(params, train_data_path):
     desired_size = int(params["dataset_size"]*len(all_train_paths))
         
     if desired_size < len(all_train_paths):
-            # Create NESTED subset: shuffle once with fixed seed, then take first N
-            # This ensures dataset_size=20 ⊂ dataset_size=40 ⊂ dataset_size=60, etc.
+        # Create NESTED subset: shuffle once with fixed seed, then take first N
+        # This ensures dataset_size=20 ⊂ dataset_size=40 ⊂ dataset_size=60, etc.
         random.seed(42)  # Fixed seed for reproducibility across all experiments
         all_train_paths_shuffled = all_train_paths.copy()
         random.shuffle(all_train_paths_shuffled)
             
-            # Take first N paths (ensures nesting property)
+        # Take first N paths (ensures nesting property)
         sampled_paths = all_train_paths_shuffled[:desired_size]
             
-            # Create temporary file in the SAME DIRECTORY as original file
-            # This is critical because the dataset prepends "../" and looks for labels/ relative to the file location
+        # Create temporary file in the SAME DIRECTORY as original file
+        # This is critical because the dataset prepends "../" and looks for labels/ relative to the file location
         orig_dir = os.path.dirname(train_data_path)
         temp_file = tempfile.NamedTemporaryFile(
                 mode='w', 
@@ -100,11 +83,8 @@ def create_experiment_train_path(params, train_data_path):
         temp_file.close()
         train_data_path = temp_file.name
             
-        click.secho(
-            f"[INFO] Dataset size limiting: Using {desired_size}/{len(all_train_paths)} training images (NESTED subset)", 
-            fg="blue"
-        )
-        click.secho(f"[INFO] Temporary file created: {train_data_path}", fg="blue")
+        log_info(f"Dataset size limiting: Using {desired_size}/{len(all_train_paths)} training images (NESTED subset)")
+        log_info(f"Temporary file created: {train_data_path}")
     else:
-        click.secho(f"[INFO] Dataset size: Using all {len(all_train_paths)} training images", fg="blue")
+        log_info(f"Dataset size: Using all {len(all_train_paths)} training images")
     return train_data_path

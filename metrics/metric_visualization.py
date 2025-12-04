@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 from scipy.ndimage import gaussian_filter1d
 import numpy as np
 from ultralytics.utils.metrics import ConfusionMatrix
+from utils.echo import log, log_success
 
 def plot_all_metrics(confusion_matrix : ConfusionMatrix, base_dir: Path):
     """Generate and save all metric plots."""
@@ -17,9 +18,9 @@ def plot_all_metrics(confusion_matrix : ConfusionMatrix, base_dir: Path):
     plot_confusion_matrix(confusion_matrix, save_dir)
     plot_csv_results(csv_path, save_dir)
 
-    click.secho(f"[SUCCESS] Metrics saved to {save_dir}",fg="green")
-    click.echo(f"   - Results CSV: {csv_path}")
-    click.echo(f"   - Plots: {save_dir}/*.png")
+    log_success(f"Metrics saved to {save_dir}")
+    log(f"   - Results CSV: {csv_path}")
+    log(f"   - Plots: {save_dir}/*.png")
 
 def plot_confusion_matrix(confusion_matrix : ConfusionMatrix, save_dir: Path):
     """Generate final plots and save metrics."""
@@ -64,12 +65,12 @@ def plot_csv_results(csv_path: Path, save_dir: Path):
         ('lr/pg0', 'Learning Rate'),
     ]
     
-    # Create figure with subplots
+   
     n_plots = len(plot_configs)
     n_cols = 3
     n_rows = (n_plots + n_cols - 1) // n_cols
     
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 4 * n_rows))
+    _, axes = plt.subplots(n_rows, n_cols, figsize=(15, 4 * n_rows))
     axes = axes.flatten() if n_rows > 1 else [axes] if n_cols == 1 else axes
     
     for idx, (key, title) in enumerate(plot_configs):
@@ -78,7 +79,6 @@ def plot_csv_results(csv_path: Path, save_dir: Path):
         if key in data and len(data[key]) > 0:
             y = data[key]
             
-            # Plot actual values
             ax.plot(epochs, y, marker='o', markersize=3, linewidth=1.5, label='Actual')
             
             # Plot smoothed curve if enough data points

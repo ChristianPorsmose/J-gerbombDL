@@ -5,49 +5,13 @@ import os
 import math
 from pathlib import Path
 
-from jäger_bomb_loss import JägerBombLoss
 from torchvision.transforms import v2 as T
 from ultralytics.utils.loss import v8DetectionLoss
-from letter_box_transform import LetterBoxTransform
 import random
 import tempfile
 import os
 from typing import List
 import click
-
-def convert_to_python_types(obj):
-    """Recursively convert numpy/torch types to native Python types."""
-    if isinstance(obj, dict):
-        return {k: convert_to_python_types(v) for k, v in obj.items()}
-    elif isinstance(obj, (list, tuple)):
-        return [convert_to_python_types(item) for item in obj]
-    elif isinstance(obj, (np.integer, np.int32, np.int64)):
-        return int(obj)
-    elif isinstance(obj, (np.floating, np.float32, np.float64)):
-        return float(obj)
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()
-    elif hasattr(obj, 'item'):  # torch tensors
-        return obj.item()
-    else:
-        return obj
-    
-def convert_to_serializable(obj):
-    """Convert object to JSON-serializable format."""
-    if isinstance(obj, Path):
-        return str(obj)
-    elif isinstance(obj, (np.integer, np.floating)):
-        return obj.item()
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()
-    elif isinstance(obj, dict):
-        return {k: convert_to_serializable(v) for k, v in obj.items()}
-    elif isinstance(obj, (list, tuple)):
-        return [convert_to_serializable(item) for item in obj]
-    elif hasattr(obj, '__dict__'):
-        return str(obj)
-    else:
-        return obj
     
 
 def xywh_to_xyxy(bboxes: torch.Tensor, img_w: int, img_h: int) -> torch.Tensor:
@@ -100,19 +64,6 @@ def freeze_backbone_layers(torch_model, backbone_to_freeze):
     click.secho(f"[SUCCESS] Froze {frozen_count} backbone parameters (model.0..model.{max_to_freeze})", fg="green")
 
 
-def freeze_dfl_conv_weights(torch_model):
-    """Freeze the weights of dfl.conv layers in the model."""
-    found = False
-
-    for name, module in torch_model.named_modules():
-        if name.endswith('.dfl.conv'):
-            for pname, param in module.named_parameters(recurse=False):
-                if pname == 'weight':
-                    param.requires_grad = False
-                    found = True
-    click.secho(f"[SUCCESS] Froze DFL convolution weights at path: {name}", fg="green")
-    if not found:
-        click.secho("[ERROR] Could not locate the DFL convolution module.", fg="red")
 
 def create_experiment_train_path(params, train_data_path):
     with open(train_data_path, 'r') as f:

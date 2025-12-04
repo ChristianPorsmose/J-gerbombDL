@@ -1,6 +1,7 @@
 
 from dataclasses import fields, is_dataclass
 import click
+from utils.echo import log_info, log
 
 def log_config_params(cfg):
     def print_dataclass(dc, prefix=""):
@@ -10,9 +11,9 @@ def log_config_params(cfg):
             if is_dataclass(value):
                 print_dataclass(value, prefix=f"{field_name}.")
             else:
-                click.echo(click.style(f"{field_name}:", bold=True), nl=False)
-                click.echo(f" {value}")
-    click.secho("[INFO] Training configuration summary:", fg="blue", bold=True)
-    click.echo("-" * 60)
+                log(click.style(f"{field_name}:", bold=True), nl=False)
+                log(f" {value}")
+    log_info("Training configuration summary:")
+    log("-" * 60)
     print_dataclass(cfg)
-    click.echo("="*60 + "\n")
+    log("="*60 + "\n")

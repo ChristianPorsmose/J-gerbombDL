@@ -15,6 +15,7 @@ from ultralytics.utils.loss import v8DetectionLoss
 from engine.data import LossFunc, TrainerConfig, TrainerState
 from dataset.yolo_compose import YOLOCompose
 from types import SimpleNamespace
+from utils.echo import log_success, log_info, log
 
 def collate_fn(batch):
     images, targets = zip(*batch)
@@ -28,7 +29,7 @@ class TrainingFactory:
 
     def _create_yolo_model(self) -> YOLO:
         if self.cfg.model.pretrained:
-            click.secho("[INFO] Loading pretrained YOLOv11n model weights", fg="blue")
+            log_info("Loading pretrained YOLOv11n model weights")
             return YOLO( self.cfg.model.type, task="detect").load('yolo11n.pt')
         return YOLO( self.cfg.model.type, task="detect")
     
@@ -137,8 +138,8 @@ class TrainingFactory:
         optimizer.add_param_group({"params": weights, "weight_decay": weight_decay})
         optimizer.add_param_group({"params": bn_no_decay, "weight_decay": 0.0})
 
-        click.secho(f"[SUCCESS] Optimizer created: {optimizer_type} | lr={lr}, weight_decay={weight_decay}, momentum={momentum}", fg="green")
-        click.echo(f"Parameter groups: {len(weights)} weights(decay), {len(bn_no_decay)} batchnorm(no decay), {len(biases)} biases(no decay)")
+        log_success(f"Optimizer created: {optimizer_type} | lr={lr}, weight_decay={weight_decay}, momentum={momentum}")
+        log(f"Parameter groups: {len(weights)} weights(decay), {len(bn_no_decay)} batchnorm(no decay), {len(biases)} biases(no decay)")
 
         return optimizer
 
@@ -152,18 +153,18 @@ class TrainingFactory:
                 # Cosine annealing: starts at 1.0, ends at lrf
                 return lrf + (1 - lrf) * 0.5 * (1 + math.cos(math.pi * epoch / epochs))
 
-            click.echo(f"Learning rate scheduler: cosine decay from {lr:.6f} to {lr * 0.01:.6f} over {epochs} epochs")
+            log(f"Learning rate scheduler: cosine decay from {lr:.6f} to {lr * 0.01:.6f} over {epochs} epochs")
             return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=one_cycle_lr)
 
-        click.echo(f"Learning rate: fixed at {lr:.6f}")
+        log(f"Learning rate: fixed at {lr:.6f}")
         return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda epoch: 1.0)
 
     def create_loss_func(self, torch_model : torch.nn.Module, loss_type : LossConfig) -> LossFunc:
         torch_model.args = SimpleNamespace(box=7.5, cls=0.5, dfl=1.5)
         if loss_type.type == "spatial_consistency":
-            click.secho("[INFO] Using spatial consistency loss (JägerBombLoss)", fg="blue")
+            log_info("Using spatial consistency loss (JägerBombLoss)")
             return JägerBombLoss(torch_model, lamda_rate=1)
-        click.secho("[INFO] Using standard YOLO loss (v8DetectionLoss)", fg="blue")
+        log_info("Using standard YOLO loss (v8DetectionLoss)")
         return v8DetectionLoss(torch_model)
 
     def create(self) -> Tuple[TrainerConfig, TrainerState]:

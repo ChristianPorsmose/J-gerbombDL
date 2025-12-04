@@ -2,9 +2,10 @@
 
 import click
 from engine.data import LossComponent
+from utils.echo import log
 
 def log_loss(epoch : int , loss : LossComponent, header : str = ""):
-    click.echo(
+    log(
         f"{header}, " 
         f"Epoch {epoch}, " if epoch else ""
         f"Box: {loss.box:.4f}, "

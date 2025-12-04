@@ -7,6 +7,7 @@ import cv2
 import torch
 import numpy as np
 from ultralytics.utils.nms import non_max_suppression
+from utils.echo import log
 
 CONFIDENCE_THRESHOLD = 0.25
 GREEN = (0, 255, 0)
@@ -73,13 +74,13 @@ def visualize_batch(images, batch_dict,save_dir, predictions=None, epoch=0, is_t
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
     plt.close()
     
-    print(f"Saved {split} visualization → {save_path}")
+    log(f"Saved {split} visualization → {save_path}")
 
 def _draw_predictions(predictions, colors, labels, idx, ax):
     pred_boxes = predictions[0][idx]
             
     if len(pred_boxes) > 0:
-                # pred_boxes in format: [x1, y1, x2, y2, conf, cls], I.e. bounding boxes, confidence, and class
+        # pred_boxes in format: [x1, y1, x2, y2, conf, cls], I.e. bounding boxes, confidence, and class
         for pred in pred_boxes:
             if len(pred) < 6:
                 continue
@@ -99,7 +100,7 @@ def _draw_ground_truth_boxes(batch_dict, colors, labels, ax, h, w, img_mask):
     gt_classes = batch_dict['cls'][img_mask].cpu().numpy()
     gt_bboxes = batch_dict['bboxes'][img_mask].cpu().numpy()  # normalized xywh
     for cls, bbox in zip(gt_classes, gt_bboxes):
-                # Convert normalized xywh to pixel xyxy
+        # Convert normalized xywh to pixel xyxy
         x_center, y_center, width, height = bbox
         x1 = (x_center - width/2) * w
         y1 = (y_center - height/2) * h
@@ -123,7 +124,7 @@ def visualize_predictions(self, epoch, model, data_loader, device):
     colors = {0: RED, 1: BLUE}
     labels = {0: 'shot', 1: 'cup'}
     
-    print(f"Generating prediction visualizations for epoch {epoch}...")
+    log(f"Generating prediction visualizations for epoch {epoch}...")
     
     with torch.no_grad():
         # validation loop
@@ -167,7 +168,7 @@ def visualize_predictions(self, epoch, model, data_loader, device):
             if batch_idx >= 2:  # Visualize first 3 batches
                 break
     
-    print(f"Saved prediction visualizations → {save_dir}")
+    log(f"Saved prediction visualizations → {save_dir}")
 
 def _draw_box(colors, img, x1, y1, x2, y2, cls):
     cv2.rectangle(img, (x1, y1), (x2, y2), colors.get(cls, GREEN, 2))
