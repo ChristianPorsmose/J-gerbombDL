@@ -1,14 +1,14 @@
+from typing import List
 from torch.utils.data import Dataset
 from torchvision.io import decode_image
 import os
 from torch import tensor
 import torch
-from PIL import Image
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 empty_labels = torch.zeros((0, 5), dtype=torch.float32)
 
-class JägerBombDataset(Dataset):
+class JägerBombDataset(Dataset): # type: ignore
     def __init__(
         self,
         images_list: str,
@@ -16,14 +16,14 @@ class JägerBombDataset(Dataset):
         images_list_ext: str = "txt",
 
         labels_ext: str = "txt",
-        transforms=None
+        transforms : list = None
         ):
 
         self.images_list = images_list
         self.images_list_ext = images_list_ext
         self.labels_ext = labels_ext
 
-        self.image_files = []
+        self.image_files : List[str] = []
         file = open(images_list, "r")
 
         images_list_dir = os.path.dirname(images_list)
@@ -34,7 +34,7 @@ class JägerBombDataset(Dataset):
             self.image_files.append(full_name)
             i += 1
 
-        self.label_files = []
+        self.label_files : List[str] = []
         self.labels_dir = os.path.join(images_list_dir, "labels")
 
         for image_path in self.image_files:
@@ -48,14 +48,13 @@ class JägerBombDataset(Dataset):
     def __len__(self):
         return len(self.image_files)
 
-    def __get_label_path_from_image_path(self, image_path):
-        #print("Getting label path for image:", image_path)
+    def __get_label_path_from_image_path(self, image_path : str) -> str:
         return os.path.join(
             self.labels_dir,
             os.path.basename(image_path).replace(".jpg", f".{self.labels_ext}", 1),
         )
     
-    def __getitem__(self, index):
+    def __getitem__(self, index : int):
         image_path = self.image_files[index]
         image = decode_image(image_path)
         

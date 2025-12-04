@@ -1,8 +1,7 @@
 from torch.utils.data import DataLoader
-from typing import Any, Callable, Optional, Union, TypeAlias, Tuple
+from typing import Callable, Union, TypeAlias, Tuple
 from dataclasses import dataclass
 import torch.optim as optim
-from typing import Any
 import torch
 from ultralytics.models.yolo.model import YOLO
 from metrics.metrics import Metrics

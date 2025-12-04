@@ -14,7 +14,7 @@ class JägerBombMetricTracker:
     """
     Metric tracker for Jäger Bomb training.
     """
-    def __init__(self, names,save_dir : Path):
+    def __init__(self, names : dict ,save_dir : Path):
         self.save_dir = save_dir
         self.names = names
         self.nc = len(names)

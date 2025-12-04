@@ -1,7 +1,4 @@
-import torch
 from ultralytics.models import YOLO
-from torchvision.io import read_image, write_jpeg
-from torchvision.utils import draw_bounding_boxes
 import os
 
 def test_image_simple(weights_path, image_path, conf_threshold=0.6, output_path="output.jpg"):
@@ -44,8 +41,8 @@ def test_image_simple(weights_path, image_path, conf_threshold=0.6, output_path=
 
 if __name__ == "__main__":
     # Configuration
-    WEIGHTS_PATH = "weights.pt"
-    IMAGE_PATH = "../dataset_final_boxes_yolo/images/Adrian_20251107_094907.jpg"
+    WEIGHTS_PATH = "experiments_results/phase1a_adamw_standard/runs/train_20251204_183521/weights/best.pt"
+    IMAGE_PATH = "dataset_final_boxes_yolo/images/Adrian_20251107_094907.jpg"
     CONFIDENCE_THRESHOLD = 0.6
     OUTPUT_PATH = "detection_result.jpg"
     

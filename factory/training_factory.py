@@ -77,7 +77,7 @@ class TrainingFactory:
             T.ToDtype(torch.float32, scale=True)
         ]
 
-    def create_transform_list(self, augmentation_mode : str) -> list:
+    def _create_transform_list(self, augmentation_mode : str) -> list:
         augmentation_dict = {
             "light": self._light_augmentation,
             "geometric": self._geometric_augmentation,
@@ -122,7 +122,7 @@ class TrainingFactory:
         log_success(f"Optimizer created: {optimizer_type} | lr={lr}, weight_decay={weight_decay}, momentum={momentum}")
         return optimizer
 
-    def create_scheduler(self, optimizer) -> torch.optim.lr_scheduler._LRScheduler:
+    def _create_scheduler(self, optimizer : torch.optim.Optimizer) -> torch.optim.lr_scheduler.LambdaLR:
         epochs = self.cfg.training.epochs
         lr = self.cfg.optimizer.lr
         if self.cfg.optimizer.lr_scheduler == "cosine":
@@ -138,7 +138,7 @@ class TrainingFactory:
         log(f"Learning rate: fixed at {lr:.6f}")
         return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda epoch: 1.0)
 
-    def create_loss_func(self, torch_model : torch.nn.Module, loss_type : LossConfig) -> LossFunc:
+    def _create_loss_func(self, torch_model : torch.nn.Module, loss_type : LossConfig) -> LossFunc:
         torch_model.args = SimpleNamespace(box=7.5, cls=0.5, dfl=1.5)
         if loss_type.type == "spatial":
             log_info("Using spatial consistency loss (JägerBombLoss)")
@@ -148,13 +148,13 @@ class TrainingFactory:
 
     def create(self, model : YOLO, params : list) -> Tuple[TrainerConfig, TrainerState]:
         torch_model = model.model
-        train_transforms = self.create_transform_list(self.cfg.augmentation)
-        val_transforms = self.create_transform_list("none")
+        train_transforms = self._create_transform_list(self.cfg.augmentation)
+        val_transforms = self._create_transform_list("none")
         train_ds, val_ds, test_ds = self._create_datasets(train_transforms, val_transforms)
         train_dl, val_dl, test_dl = self._create_dataloaders(train_ds, val_ds, test_ds)
         optimizer = self._create_optimizer(params)
-        scheduler = self.create_scheduler(optimizer)
-        loss_fn = self.create_loss_func(torch_model, self.cfg.loss_type)
+        scheduler = self._create_scheduler(optimizer)
+        loss_fn = self._create_loss_func(torch_model, self.cfg.loss_type)
 
         trainer_cfg = TrainerConfig(
             epochs=self.cfg.training.epochs,

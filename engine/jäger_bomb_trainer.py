@@ -14,6 +14,8 @@ from engine.data import BatchResult, LossComponent, TrainerConfig, TrainerState
 from engine.log_helpers import log_loss
 from ultralytics.models.yolo.model import YOLO
 from utils.echo import log_warning, log_info, log_success, log
+from torch.amp.grad_scaler import GradScaler
+from torch.utils.data import DataLoader
 
 class JägerBombTrainer:
     def __init__(self, cfg: TrainerConfig, state : TrainerState):
@@ -27,7 +29,7 @@ class JägerBombTrainer:
     def _init_grad_scaler(self):
         """Initialize gradient scaler for mixed precision training."""
         enable = self.device.startswith('cuda')
-        self.scaler = torch.amp.GradScaler(self.device, enabled=enable)
+        self.scaler = GradScaler(self.device, enabled=enable)
     
     def _init_metrics(self):
         """Initialize metrics tracking."""
@@ -63,7 +65,7 @@ class JägerBombTrainer:
             json.dump(loss_dict, f, indent=2)
     
     @torch.no_grad()
-    def _evaluate(self, epoch, loader, header : str = "VALIDATION") -> LossComponent:
+    def _evaluate(self, epoch : int, loader : DataLoader, header : str = "VALIDATION") -> LossComponent:
         """Validate model and compute metrics."""
         self.torch_model.eval()
         
@@ -100,7 +102,7 @@ class JägerBombTrainer:
         
         return average_loss
 
-    def _save_model(self, epoch, is_best=False):
+    def _save_model(self, epoch : int, is_best=False):
         """Save model checkpoint."""
         save_dir = Path(self.metric_tracker.save_dir) / "weights"
         save_dir.mkdir(parents=True, exist_ok=True)
@@ -221,7 +223,7 @@ class JägerBombTrainer:
         return count
 
 
-    def train_one_epoch(self, train_loader_len, nr_warmup_iterations, epoch_train_losses : LossComponent, epoch, first_batch_saved):
+    def train_one_epoch(self, train_loader_len : int, nr_warmup_iterations : int, epoch_train_losses : LossComponent, epoch : int, first_batch_saved : bool):
         batch_count = 0
         for batch_idx, (X, y) in enumerate(self.state.train_loader):
             

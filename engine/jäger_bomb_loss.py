@@ -7,7 +7,7 @@ SHOT_IDX = 0
 CUP_IDX = 1
 
 class JägerBombLoss(v8DetectionLoss):
-    def __init__(self, model, tal_topk=10, lamda_rate=0.001): 
+    def __init__(self, model : torch.nn.Module, tal_topk=10, lamda_rate=0.001): 
         super().__init__(model, tal_topk)
         self.lamda_rate = lamda_rate
 
