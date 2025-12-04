@@ -1,0 +1,35 @@
+experiment_name: str 
+
+model:
+  type: str (path to yaml)
+  pretrained: bool
+
+paths:
+  train: str (path to training set)
+  val: str (path to val set)
+  test: str (path to test set)
+
+training:
+  batch_size: int
+  epochs: int
+  log_interval: int
+  save_interval: int
+  save_path: str (directory)
+
+optimizer:
+  type: enum [AdamW, SGD]
+  lr: float
+  lr_scheduler: enum [fixed, cosine]
+  weight_decay: float
+  momentum: float 
+
+freeze:
+  backbone_layers: int
+  dfl: bool
+
+augmentation: enum [none, light, heavy]
+dataset_size: int ( % of dataset)
+
+loss:
+  type: enum [spatial, default]
+  lambda_rate: float (only for spatial)

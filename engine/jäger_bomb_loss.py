@@ -78,7 +78,7 @@ class JägerBombLoss(v8DetectionLoss):
 
             # Predicted boxes at positives
             pos_pred_boxes = pred_bboxes[b, pos]  # (M, 4)
-            
+
             # Class scores at positives
             pos_scores = target_scores[b, pos]     # (M, C)
             if pos_scores.numel() == 0:
@@ -94,6 +94,7 @@ class JägerBombLoss(v8DetectionLoss):
 
             shot_nearest_cup_loss = self._nearest_loss(shot_boxes, cup_boxes)
             cup_nearest_shot_loss = self._nearest_loss(cup_boxes, shot_boxes)
+
             total += (shot_nearest_cup_loss + cup_nearest_shot_loss) / 2.0
 
         return total / B

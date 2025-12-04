@@ -8,7 +8,7 @@ from utils.experiment_log import log_config_params
 from freezer.freezer import Freezer
 
 @click.command()
-@click.option("--config", default="schema_template.yaml", help="Path to YAML config file")
+@click.option("--config", default="main.yaml", help="Path to YAML config file")
 def main(config):
     experiment_cfg = load_config(config)
     log_config_params(experiment_cfg)
