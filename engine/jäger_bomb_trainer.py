@@ -11,6 +11,7 @@ from metrics.jäger_bomb_metric_logger import JägerBombMetricLogger
 from metrics.metric_visualization import plot_all_metrics
 from engine.bomb_visualize import visualize_batch, visualize_predictions
 from engine.data import BatchResult, LossComponent, TrainerConfig, TrainerState
+from engine.log_helpers import log_loss
 
 class JägerBombTrainer:
     def __init__(self, cfg: TrainerConfig, state : TrainerState):
@@ -41,11 +42,12 @@ class JägerBombTrainer:
         )
     
     @torch.no_grad()
-    def _validate(self, epoch):
+    def _validate(self, epoch) -> LossComponent:
         """Validate model and compute metrics."""
         self.torch_model.eval()
         
-        val_box = val_cls = val_dfl = val_spatial = count = 0
+        val_loss = LossComponent()
+        count = 0
 
         self.metric_tracker.reset()
         
@@ -59,86 +61,25 @@ class JägerBombTrainer:
             _, last_loss = self.state.loss_fn(pred_val, batch)
             loss_values = last_loss.cpu().numpy().round(3)
             
-            # Handle both standard loss (3 elements) and spatial loss (4 elements)
-            if len(loss_values) == 4:
-                box_loss, cls_loss, dfl_loss, spatial_loss = loss_values
-                val_spatial += spatial_loss
-            else:
-                box_loss, cls_loss, dfl_loss = loss_values
+            new_loss = self._extract_loss_component(loss_values)
             
-            val_box += box_loss
-            val_cls += cls_loss
-            val_dfl += dfl_loss
+            val_loss += new_loss
+
             count += 1
             
-            # Update metrics with predictions
-            # Convert bboxes from xywh normalized to xyxy pixel format
             img_h, img_w = X_val.shape[2], X_val.shape[3]
             
-            # batch dict from _prepare_batch_dict may have filtered targets
-            # We need to use the original y_val to get all ground truths
-            # y_val shape: [batch_size, max_objects, 5] where 5 = [cls, x, y, w, h]
-            all_gt_cls = []
-            all_gt_bboxes = []
-            all_batch_idx = []
+            metrics_batch = self.metric_tracker.prepare_batch(y_val, img_h, img_w)
             
-            for bi in range(y_val.shape[0]):
-                # Get targets for this image (filter out padding)
-                img_targets = y_val[bi][y_val[bi, :, 0] != -1]
-                if img_targets.shape[0] > 0:
-                    cls = img_targets[:, 0]
-                    bboxes_xywh = img_targets[:, 1:]
-                    # Convert to xyxy pixel coordinates
-                    bboxes_xyxy = xywh_to_xyxy(bboxes_xywh, img_w, img_h)
-                    
-                    all_gt_cls.append(cls)
-                    all_gt_bboxes.append(bboxes_xyxy)
-                    all_batch_idx.extend([bi] * cls.shape[0])
-            
-            if len(all_gt_cls) > 0:
-                metrics_batch = {
-                    'cls': torch.cat(all_gt_cls),
-                    'bboxes': torch.cat(all_gt_bboxes),
-                    'batch_idx': torch.tensor(all_batch_idx, device=y_val.device)
-                }
-            else:
-                metrics_batch = {
-                    'cls': torch.empty(0, device=y_val.device),
-                    'bboxes': torch.empty((0, 4), device=y_val.device),
-                    'batch_idx': torch.empty(0, dtype=torch.long, device=y_val.device)
-                }
-            
-            try:
-                self.metric_tracker.update(pred_val, metrics_batch)
-            except Exception as e:
-                click.secho(f"[ERROR] Metrics update failed: {e}", fg="red")
-                traceback.print_exc()
+            self.metric_tracker.update(pred_val, metrics_batch)
         
-        # Compute average losses
-        avg_box = val_box / count
-        avg_cls = val_cls / count
-        avg_dfl = val_dfl / count
-        avg_spatial = val_spatial / count
+        average_loss = val_loss / count
+        
+        log_loss(epoch, average_loss, header="VALIDATION")
+        
+        return average_loss
 
-        avg_total = avg_box + avg_cls + avg_dfl + avg_spatial
-        
-        spatial_str = f", Spatial: {avg_spatial:.4f}" if avg_spatial > 0 else ""
-        click.echo(
-            f"VALIDATION — Epoch {epoch}: "
-            f"Box: {avg_box:.4f}, "
-            f"Cls: {avg_cls:.4f}, "
-            f"DFL: {avg_dfl:.4f}"
-            f"{spatial_str}, "
-            f"Total: {avg_total:.4f}"
-        )
-        
-        return {
-            'box': avg_box,
-            'cls': avg_cls,
-            'dfl': avg_dfl,
-            'spatial': avg_spatial,
-            'total': avg_total
-        }
+
 
     def _prepare_batch_dict(self, images: torch.Tensor, targets: torch.Tensor) -> dict:
         valid_mask = targets[:, :, 0] != -1
@@ -174,87 +115,59 @@ class JägerBombTrainer:
         else:
             click.secho(f"[INFO] Checkpoint saved → {last_path}", fg="blue")  
 
-    def _reset_train_losses(self):
-        return {'box': 0, 'cls': 0, 'dfl': 0, 'spatial': 0}
-
-
     def train(self):
         self.torch_model.to(self.device)
         best_loss = np.inf
         count = 0
-        early_stoppage_count = 9999999999
-        
-        warmup_epochs = 3.0
+        EARLY_STOPPAGE_COUNT = 9999999999
+        WARMUP_EPOCHS = 3.0
+    
         train_loader_len = len(self.state.train_loader)
-        nr_warmup_iterations = max(round(warmup_epochs * train_loader_len), 100)
+        nr_warmup_iterations = max(round(WARMUP_EPOCHS * train_loader_len), 100)
         
-        # Track training losses per epoch
-        epoch_train_losses = self._reset_train_losses()
+        epoch_train_losses = LossComponent()
         
         for epoch in range(self.cfg.epochs):
             self.torch_model.train(True)
             
-            epoch_train_losses = self._reset_train_losses()
+            epoch_train_losses = LossComponent()
             batch_count = 0
             
             # Track first batch for visualization
             first_batch_saved = False
             
-            batch_count += self.train_one_epoch(train_loader_len, nr_warmup_iterations, epoch_train_losses, epoch, first_batch_saved)
+            batch_count += self.train_one_epoch(train_loader_len, nr_warmup_iterations, epoch_train_losses, epoch, first_batch_saved) # FIX ME
             
-            # FIX ME: THIS IS ONLY FOR LOGGING? 
-            avg_train_losses = {
-                'box': epoch_train_losses['box'] / batch_count,
-                'cls': epoch_train_losses['cls'] / batch_count,
-                'dfl': epoch_train_losses['dfl'] / batch_count,
-                'spatial': epoch_train_losses['spatial'] / batch_count
-            }
+            average_train_loss = epoch_train_losses / batch_count
             
             val_losses = self._validate(epoch)
             # Compute detection metrics and generate plots every N epochs or at end
             generate_plots = (epoch == self.cfg.epochs - 1)
             
-
             if generate_plots:
                 visualize_predictions(epoch, self.torch_model, self.state.val_loader, self.device)
             
             det_metrics = self.metric_tracker.compute(plot=generate_plots)
-                
-            click.echo(
-                    f"METRICS — Epoch {epoch}: "
-                    f"P: {det_metrics['precision']:.4f}, "
-                    f"R: {det_metrics['recall']:.4f}, "
-                    f"mAP50: {det_metrics['mAP50']:.4f}, "
-                    f"mAP50-95: {det_metrics['mAP50-95']:.4f}"
-                )
 
-            if epoch >= warmup_epochs:
+            if epoch >= WARMUP_EPOCHS:
                 self.state.scheduler.step()
             
             current_lr = self.state.optimizer.param_groups[0]['lr']
             click.echo(f"Learning rate: {current_lr:.6f}")
             
-            # FIX ME: why do metrics have this?? 
-            self.metrics_logger.log_metrics(
+            self.metrics_logger.log_batch_result(
                 batchResult=BatchResult(
-                    train_loss=LossComponent(**avg_train_losses),
-                    val_loss=LossComponent(**val_losses),
+                    train_loss=average_train_loss,
+                    val_loss=val_losses,
                     metrics=det_metrics
                 ),
                 epoch=epoch,
                 lr=current_lr
                 )
             
-            curr_val_loss = val_losses['total']
-            if curr_val_loss < best_loss:
-                self._save_model(epoch, is_best=True)
-                best_loss = curr_val_loss
-                count = 0
-            else:
-                self._save_model(epoch, is_best=False)
-                count += 1
+            count = self._save(best_loss, epoch, val_losses)
             
-            if count >= early_stoppage_count:
+            if count >= EARLY_STOPPAGE_COUNT:
                 click.secho(f"[INFO] Early stopping at epoch {epoch}", fg="blue")
                 break
         
@@ -271,60 +184,71 @@ class JägerBombTrainer:
         
         click.secho("[SUCCESS] Training complete!", fg="green")
 
-    def train_one_epoch(self, train_loader_len, nr_warmup_iterations, epoch_train_losses, epoch, first_batch_saved):
+    def _save(self, best_loss : int, epoch: int, val_losses : LossComponent) -> int:
+        curr_val_loss = val_losses.total()
+        if curr_val_loss < best_loss:
+            self._save_model(epoch, is_best=True)
+            best_loss = curr_val_loss
+            count = 0
+        else:
+            self._save_model(epoch, is_best=False)
+            count += 1
+        return count
+
+
+    def train_one_epoch(self, train_loader_len, nr_warmup_iterations, epoch_train_loss : LossComponent, epoch, first_batch_saved):
         batch_count = 0
         for batch_idx, (X, y) in enumerate(self.state.train_loader):
-                # Warmup learning rate for first few epochs
-            ni = batch_idx + train_loader_len * epoch  # number integrated batches
-            if ni <= nr_warmup_iterations:
-                xi = [0, nr_warmup_iterations]  # warmup iteration range
-                    # Warmup: gradually increase LR from 0.1 to target
+            
+            # Warmup learning rate for first few epochs
+            nr_integrated_batches = batch_idx + train_loader_len * epoch 
+            if nr_integrated_batches <= nr_warmup_iterations:
+                warmup_iteration_range = [0, nr_warmup_iterations] 
+                
+                # Warmup: gradually increase LR from 0.1 to target
                 for j, x in enumerate(self.state.optimizer.param_groups):
-                    x['lr'] = np.interp(ni, xi, [0.1 * x['initial_lr'], x['initial_lr']])
+                    x['lr'] = np.interp(nr_integrated_batches, warmup_iteration_range, [0.1 * x['initial_lr'], x['initial_lr']])
                 
             X, y = X.to(self.device), y.to(self.device) 
             batch = self._prepare_batch_dict(X, y)
                 
-                # Save first training batch for visualization (only at epoch 0)
             if batch_idx == 0 and epoch == 0 and not first_batch_saved:
                 visualize_batch(X, batch,self.metric_tracker.save_dir ,predictions=None, 
                                         epoch=epoch, is_train=True, max_imgs=4)
                 first_batch_saved = True
-                # Forward pass with AMP
+
             with torch.amp.autocast(device_type=self.device, enabled=self.scaler.is_enabled()):
                 pred = self.torch_model.forward(X)
                 batch_loss, last_loss = self.state.loss_fn(pred, batch)
                 
             loss_values = last_loss.detach().cpu().numpy().round(3)
-                # Handle both standard loss (3 elements) and spatial loss (4 elements)
-            if len(loss_values) == 4:
-                box_loss, cls_loss, dfl_loss, spatial_loss = loss_values
-                epoch_train_losses['spatial'] += spatial_loss
-            else:
-                box_loss, cls_loss, dfl_loss = loss_values
+     
+            new_loss = self._extract_loss_component(loss_values)
                 
             loss = batch_loss.sum()
-                # Accumulate epoch losses
-            epoch_train_losses['box'] += box_loss
-            epoch_train_losses['cls'] += cls_loss
-            epoch_train_losses['dfl'] += dfl_loss
+                
+            epoch_train_loss += new_loss
             batch_count += 1
                 
-                # Backward pass with gradient scaling
+                
             self.state.optimizer.zero_grad()
             self.scaler.scale(loss).backward()
-                # Gradient clipping (prevents exploding gradients)
+            
+            # Gradient clipping (prevents exploding gradients)
             self.scaler.unscale_(self.state.optimizer)
             torch.nn.utils.clip_grad_norm_(self.torch_model.parameters(), max_norm=10.0)
                 
-                # Optimizer step with scaler
             self.scaler.step(self.state.optimizer)
             self.scaler.update()
 
             if batch_idx % self.cfg.log_interval == 0:
-                click.echo(
-                        f"Epoch {epoch}, Batch {batch_idx}, "
-                        f"Box: {box_loss:.4f}, Cls: {cls_loss:.4f}, DFL: {dfl_loss:.4f}, "
-                        f"Total: {(box_loss+cls_loss+dfl_loss):.4f}"
-                    )
+                log_loss(epoch, new_loss, header=f"TRAIN — Batch {batch_idx} ")
         return batch_count
+
+    def _extract_loss_component(self, loss_values) -> LossComponent:
+        return LossComponent(
+            box=loss_values[0],
+            cls=loss_values[1],
+            dfl=loss_values[2],
+            spatial=loss_values[3] if len(loss_values) > 3 else 0.0
+        )

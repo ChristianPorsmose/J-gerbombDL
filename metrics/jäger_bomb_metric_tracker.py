@@ -7,6 +7,8 @@ import torch
 from ultralytics.utils.nms import non_max_suppression
 import numpy as np
 
+from utils.utils import xywh_to_xyxy
+
 class JägerBombMetricTracker:
     """
     Metric tracker for Jäger Bomb training.
@@ -24,6 +26,37 @@ class JägerBombMetricTracker:
         self.det_metrics = DetMetrics(names=self.names)
         self.confusion_matrix = ConfusionMatrix(names=self.names, task="detect")
         self.seen = 0
+
+    def prepare_batch(y_val, img_w, img_h) -> dict:
+        all_gt_cls = []
+        all_gt_bboxes = []
+        all_batch_idx = []
+        
+        for bi in range(y_val.shape[0]):
+            # Get targets for this image (filter out padding)
+            img_targets = y_val[bi][y_val[bi, :, 0] != -1]
+            if img_targets.shape[0] > 0:
+                cls = img_targets[:, 0]
+                bboxes_xywh = img_targets[:, 1:]
+                # Convert to xyxy pixel coordinates
+                bboxes_xyxy = xywh_to_xyxy(bboxes_xywh, img_w, img_h)
+                
+                all_gt_cls.append(cls)
+                all_gt_bboxes.append(bboxes_xyxy)
+                all_batch_idx.extend([bi] * cls.shape[0])
+        
+        if len(all_gt_cls) > 0:
+            return {
+                'cls': torch.cat(all_gt_cls),
+                'bboxes': torch.cat(all_gt_bboxes),
+                'batch_idx': torch.tensor(all_batch_idx, device=y_val.device)
+            }
+        return {
+                'cls': torch.empty(0, device=y_val.device),
+                'bboxes': torch.empty((0, 4), device=y_val.device),
+                'batch_idx': torch.empty(0, dtype=torch.long, device=y_val.device)
+            }
+
 
     def _process_batch(self, pred_bboxes: torch.Tensor, pred_cls: torch.Tensor, 
                        gt_bboxes: torch.Tensor, gt_cls: torch.Tensor) -> np.ndarray:

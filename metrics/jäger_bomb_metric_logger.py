@@ -1,6 +1,8 @@
 
 
 import csv
+
+import click
 from engine.data import BatchResult
 from pathlib import Path
 
@@ -24,10 +26,19 @@ class JägerBombMetricLogger:
             writer = csv.writer(f)
             writer.writerow(csv_headers)
 
-    def log_metrics(self, batchResult : BatchResult, epoch:int, lr: float):
+    def log_batch_result(self, batchResult : BatchResult, epoch:int, lr: float):
         """
-        Log epoch results to CSV.
-        """
+        Log epoch results to CSV and print to terminal.
+        """ 
+        metrics = batchResult.metrics
+        click.echo(
+            f"METRICS — Epoch {epoch}: "
+            f"P: {metrics.precision:.4f}, "
+            f"R: {metrics.recall:.4f}, "
+            f"mAP50: {metrics.mAP50:.4f}, "
+            f"mAP50-95: {metrics.mAP50_95:.4f}"   
+        )
+
         row = [
             epoch,
             batchResult.train_loss.box,

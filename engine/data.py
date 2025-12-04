@@ -1,5 +1,5 @@
 from torch.utils.data import DataLoader
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Union
 from dataclasses import dataclass
 import torch.optim as optim
 from typing import Any
@@ -27,10 +27,29 @@ class TrainerState:
 
 @dataclass
 class LossComponent:
-    box: float
-    cls: float
-    dfl: float
-    spatial: Optional[float] = None
+    box: float = 0.0
+    cls: float = 0.0
+    dfl: float = 0.0
+    spatial: float = 0.0
+
+    def total(self) -> float:
+        return self.box + self.cls + self.dfl + self.spatial
+    
+    def __truediv__(self, value: Union[int, float]) -> 'LossComponent':
+        return LossComponent(
+            box=self.box / value,
+            cls=self.cls / value,
+            dfl=self.dfl / value,
+            spatial=self.spatial / value
+        )
+
+    def __add__(self, other: 'LossComponent') -> 'LossComponent':
+        return LossComponent(
+            box=self.box + other.box,
+            cls=self.cls + other.cls,
+            dfl=self.dfl + other.dfl,
+            spatial=self.spatial + other.spatial
+        )
 
 
 @dataclass
