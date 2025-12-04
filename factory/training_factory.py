@@ -27,7 +27,7 @@ class TrainingFactory:
     def __init__(self, cfg: ExperimentConfig):
         self.cfg = cfg
 
-    def _create_yolo_model(self) -> YOLO:
+    def create_yolo_model(self) -> YOLO:
         if self.cfg.model.pretrained:
             log_info("Loading pretrained YOLOv11n model weights")
             return YOLO( self.cfg.model.type, task="detect").load('yolo11n.pt')
@@ -105,23 +105,7 @@ class TrainingFactory:
                              shuffle=False, collate_fn=collate_fn, generator=generator)
         return train_dl, val_dl, test_dl
 
-    def _create_optimizer_param_groups(self, torch_model) -> list:
-        g = [], [], []  # parameter groups: [weights with decay, weights without decay, biases]
-        bn = tuple(v for k, v in torch.nn.__dict__.items() if "Norm" in k)  # normalization layers
-        
-        for module_name, module in torch_model.named_modules():
-            for param_name, param in module.named_parameters(recurse=False):
-                fullname = f"{module_name}.{param_name}" if module_name else param_name
-                if "bias" in fullname:  # bias (no decay)
-                    g[2].append(param)
-                elif isinstance(module, bn):  # batch norm weights (no decay)
-                    g[1].append(param)
-                else:  # regular weights (with decay)
-                    g[0].append(param)
-        return g
-
-    def _create_optimizer(self, torch_model : torch.nn.Module) -> torch.optim.Optimizer:
-        weights, bn_no_decay, biases = self._create_optimizer_param_groups(torch_model)
+    def _create_optimizer(self, params : list) -> torch.optim.Optimizer:
         optimizer_type = self.cfg.optimizer.type.upper()
         momentum = self.cfg.optimizer.momentum
         lr = self.cfg.optimizer.lr
@@ -129,18 +113,13 @@ class TrainingFactory:
 
         if optimizer_type == "SGD":
             use_nesterov = momentum > 0
-            optimizer = torch.optim.SGD(biases, lr=lr, momentum=momentum, nesterov=use_nesterov, weight_decay=weight_decay)
+            optimizer = torch.optim.SGD(params, lr=lr, momentum=momentum, nesterov=use_nesterov, weight_decay=weight_decay)
         elif optimizer_type == "ADAMW":
-            optimizer = torch.optim.AdamW(biases, lr=lr, betas=(momentum, 0.999), weight_decay=weight_decay)
+            optimizer = torch.optim.AdamW(params, lr=lr, betas=(momentum, 0.999), weight_decay=weight_decay)
         else:
             raise ValueError(f"Unsupported optimizer type: {optimizer_type}")
 
-        optimizer.add_param_group({"params": weights, "weight_decay": weight_decay})
-        optimizer.add_param_group({"params": bn_no_decay, "weight_decay": 0.0})
-
         log_success(f"Optimizer created: {optimizer_type} | lr={lr}, weight_decay={weight_decay}, momentum={momentum}")
-        log(f"Parameter groups: {len(weights)} weights(decay), {len(bn_no_decay)} batchnorm(no decay), {len(biases)} biases(no decay)")
-
         return optimizer
 
     def create_scheduler(self, optimizer) -> torch.optim.lr_scheduler._LRScheduler:
@@ -167,14 +146,13 @@ class TrainingFactory:
         log_info("Using standard YOLO loss (v8DetectionLoss)")
         return v8DetectionLoss(torch_model)
 
-    def create(self) -> Tuple[TrainerConfig, TrainerState]:
-        model = self._create_yolo_model()
+    def create(self, model : YOLO, params : list) -> Tuple[TrainerConfig, TrainerState]:
         torch_model = model.model
         train_transforms = self.create_transform_list(self.cfg.augmentation)
         val_transforms = self.create_transform_list("none")
         train_ds, val_ds, test_ds = self._create_datasets(train_transforms, val_transforms)
         train_dl, val_dl, test_dl = self._create_dataloaders(train_ds, val_ds, test_ds)
-        optimizer = self._create_optimizer(torch_model)
+        optimizer = self._create_optimizer(params)
         scheduler = self.create_scheduler(optimizer)
         loss_fn = self.create_loss_func(torch_model, self.cfg.loss_type)
 

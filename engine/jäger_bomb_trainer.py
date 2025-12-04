@@ -1,11 +1,11 @@
 from dataclasses import asdict
 import json
+import time
 import torch
 import numpy as np
 from pathlib import Path
 from torch import nn
 from datetime import datetime
-import click
 from metrics.jäger_bomb_metric_tracker import JägerBombMetricTracker
 from metrics.jäger_bomb_metric_logger import JägerBombMetricLogger
 from metrics.metric_visualization import plot_all_metrics
@@ -112,6 +112,28 @@ class JägerBombTrainer:
         else:
             log_info(f"Checkpoint saved → {last_path}")  
 
+    def _save_training_time(self, start: float, end :float ):
+        total_training_time = end - start
+        time_per_epoch = total_training_time / self.cfg.epochs
+        timing_info = {
+            'total_training_time_seconds': total_training_time,
+            'total_training_time_minutes': total_training_time / 60,
+            'total_training_time_hours': total_training_time / 3600,
+            'time_per_epoch_seconds': time_per_epoch,
+            'time_per_epoch_minutes': time_per_epoch / 60,
+            'num_epochs': self.cfg.epochs
+        }
+        
+        timing_path = Path(self.metric_tracker.save_dir) / "timing.json"
+        with open(timing_path, 'w') as f:
+            json.dump(timing_info, f, indent=2)
+        
+        log_info(f"Training Time Summary:")
+        log(f"  Total: {total_training_time/3600:.2f} hours ({total_training_time/60:.2f} minutes)")
+        log(f"  Per Epoch: {time_per_epoch/60:.2f} minutes ({time_per_epoch:.2f} seconds)")
+        log(f"  Saved to: {timing_path}")
+
+
     def train(self):
         self.torch_model.to(self.device)
         best_loss = np.inf
@@ -123,6 +145,8 @@ class JägerBombTrainer:
         nr_warmup_iterations = max(round(WARMUP_EPOCHS * train_loader_len), 100)
         
         epoch_train_losses = LossComponent()
+
+        training_start_time = time.time()
         
         for epoch in range(self.cfg.epochs):
             self.torch_model.train(True)
@@ -167,6 +191,9 @@ class JägerBombTrainer:
             if count >= EARLY_STOPPAGE_COUNT:
                 log_info(f"Early stopping at epoch {epoch}")
                 break
+        training_end_time = time.time()
+
+        self._save_training_time(training_start_time, training_end_time)
         
         log_info("[INFO] Generating final metrics and plots...")
         

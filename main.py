@@ -17,11 +17,13 @@ def main(config):
     torch.set_default_device(device)
 
     factory = TrainingFactory(experiment_cfg)
-    trainerCfg, trainerState = factory.create()
-    torch_model = trainerState.model.model
-
+    model = factory.create_yolo_model()
+    torch_model = model.model
+    
     freezer = Freezer(torch_model)
-    freezer.freeze_backbone_layers(experiment_cfg.freeze.backbone_layers)
+    params = freezer.freeze_backbone_layers(experiment_cfg.freeze.backbone_layers)
+
+    trainerCfg, trainerState = factory.create(model, params)
     
     if experiment_cfg.freeze.dfl:
         freezer.freeze_dfl_conv_weights()
@@ -32,3 +34,7 @@ def main(config):
 
 if __name__ == "__main__":
     main()
+
+
+
+# freeze_backbone should return params_to_train 
