@@ -1,4 +1,15 @@
 from dataclasses import dataclass
+from typing import Optional
+@dataclass
+class ModelConfig:
+    type: str
+    pretrained: bool
+
+@dataclass
+class LossConfig:
+    type: str
+    lamda_rate: Optional[float] = None
+    proportion: Optional[float] = None
 
 @dataclass
 class PathsConfig:
@@ -30,12 +41,11 @@ class FreezeConfig:
 @dataclass
 class ExperimentConfig:
     experiment_name: str
-    model: str
+    model: ModelConfig
     paths: PathsConfig
     training: TrainingConfig
     optimizer: OptimizerConfig
     freeze: FreezeConfig
     augmentation: str
     dataset_size: float
-    use_ema: bool
-    loss_type: str
+    loss_type: LossConfig

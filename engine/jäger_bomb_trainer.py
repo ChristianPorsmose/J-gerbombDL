@@ -200,60 +200,7 @@ class JägerBombTrainer:
             # Track first batch for visualization
             first_batch_saved = False
             
-            for batch_idx, (X, y) in enumerate(self.state.train_loader):
-                # Warmup learning rate for first few epochs
-                ni = batch_idx + train_loader_len * epoch  # number integrated batches
-                if ni <= nr_warmup_iterations:
-                    xi = [0, nr_warmup_iterations]  # warmup iteration range
-                    # Warmup: gradually increase LR from 0.1 to target
-                    for j, x in enumerate(self.state.optimizer.param_groups):
-                        x['lr'] = np.interp(ni, xi, [0.1 * x['initial_lr'], x['initial_lr']])
-                
-                X, y = X.to(self.device), y.to(self.device) 
-                batch = self._prepare_batch_dict(X, y)
-                
-                # Save first training batch for visualization (only at epoch 0)
-                if batch_idx == 0 and epoch == 0 and not first_batch_saved:
-                    visualize_batch(X, batch,self.metric_tracker.save_dir ,predictions=None, 
-                                        epoch=epoch, is_train=True, max_imgs=4)
-                    first_batch_saved = True
-                # Forward pass with AMP
-                with torch.amp.autocast(device_type=self.device, enabled=self.scaler.is_enabled()):
-                    pred = self.torch_model.forward(X)
-                    batch_loss, last_loss = self.state.loss_fn(pred, batch)
-                
-                loss_values = last_loss.detach().cpu().numpy().round(3)
-                # Handle both standard loss (3 elements) and spatial loss (4 elements)
-                if len(loss_values) == 4:
-                    box_loss, cls_loss, dfl_loss, spatial_loss = loss_values
-                    epoch_train_losses['spatial'] += spatial_loss
-                else:
-                    box_loss, cls_loss, dfl_loss = loss_values
-                
-                loss = batch_loss.sum()
-                # Accumulate epoch losses
-                epoch_train_losses['box'] += box_loss
-                epoch_train_losses['cls'] += cls_loss
-                epoch_train_losses['dfl'] += dfl_loss
-                batch_count += 1
-                
-                # Backward pass with gradient scaling
-                self.state.optimizer.zero_grad()
-                self.scaler.scale(loss).backward()
-                # Gradient clipping (prevents exploding gradients)
-                self.scaler.unscale_(self.state.optimizer)
-                torch.nn.utils.clip_grad_norm_(self.torch_model.parameters(), max_norm=10.0)
-                
-                # Optimizer step with scaler
-                self.scaler.step(self.state.optimizer)
-                self.scaler.update()
-
-                if batch_idx % self.cfg.log_interval == 0:
-                    click.echo(
-                        f"Epoch {epoch}, Batch {batch_idx}, "
-                        f"Box: {box_loss:.4f}, Cls: {cls_loss:.4f}, DFL: {dfl_loss:.4f}, "
-                        f"Total: {(box_loss+cls_loss+dfl_loss):.4f}"
-                    )
+            batch_count += self.train_one_epoch(train_loader_len, nr_warmup_iterations, epoch_train_losses, epoch, first_batch_saved)
             
             # FIX ME: THIS IS ONLY FOR LOGGING? 
             avg_train_losses = {
@@ -323,3 +270,61 @@ class JägerBombTrainer:
         # self._evaluate_test_set()
         
         click.secho("[SUCCESS] Training complete!", fg="green")
+
+    def train_one_epoch(self, train_loader_len, nr_warmup_iterations, epoch_train_losses, epoch, first_batch_saved):
+        batch_count = 0
+        for batch_idx, (X, y) in enumerate(self.state.train_loader):
+                # Warmup learning rate for first few epochs
+            ni = batch_idx + train_loader_len * epoch  # number integrated batches
+            if ni <= nr_warmup_iterations:
+                xi = [0, nr_warmup_iterations]  # warmup iteration range
+                    # Warmup: gradually increase LR from 0.1 to target
+                for j, x in enumerate(self.state.optimizer.param_groups):
+                    x['lr'] = np.interp(ni, xi, [0.1 * x['initial_lr'], x['initial_lr']])
+                
+            X, y = X.to(self.device), y.to(self.device) 
+            batch = self._prepare_batch_dict(X, y)
+                
+                # Save first training batch for visualization (only at epoch 0)
+            if batch_idx == 0 and epoch == 0 and not first_batch_saved:
+                visualize_batch(X, batch,self.metric_tracker.save_dir ,predictions=None, 
+                                        epoch=epoch, is_train=True, max_imgs=4)
+                first_batch_saved = True
+                # Forward pass with AMP
+            with torch.amp.autocast(device_type=self.device, enabled=self.scaler.is_enabled()):
+                pred = self.torch_model.forward(X)
+                batch_loss, last_loss = self.state.loss_fn(pred, batch)
+                
+            loss_values = last_loss.detach().cpu().numpy().round(3)
+                # Handle both standard loss (3 elements) and spatial loss (4 elements)
+            if len(loss_values) == 4:
+                box_loss, cls_loss, dfl_loss, spatial_loss = loss_values
+                epoch_train_losses['spatial'] += spatial_loss
+            else:
+                box_loss, cls_loss, dfl_loss = loss_values
+                
+            loss = batch_loss.sum()
+                # Accumulate epoch losses
+            epoch_train_losses['box'] += box_loss
+            epoch_train_losses['cls'] += cls_loss
+            epoch_train_losses['dfl'] += dfl_loss
+            batch_count += 1
+                
+                # Backward pass with gradient scaling
+            self.state.optimizer.zero_grad()
+            self.scaler.scale(loss).backward()
+                # Gradient clipping (prevents exploding gradients)
+            self.scaler.unscale_(self.state.optimizer)
+            torch.nn.utils.clip_grad_norm_(self.torch_model.parameters(), max_norm=10.0)
+                
+                # Optimizer step with scaler
+            self.scaler.step(self.state.optimizer)
+            self.scaler.update()
+
+            if batch_idx % self.cfg.log_interval == 0:
+                click.echo(
+                        f"Epoch {epoch}, Batch {batch_idx}, "
+                        f"Box: {box_loss:.4f}, Cls: {cls_loss:.4f}, DFL: {dfl_loss:.4f}, "
+                        f"Total: {(box_loss+cls_loss+dfl_loss):.4f}"
+                    )
+        return batch_count

@@ -1,4 +1,4 @@
-from configs import ExperimentConfig
+from configs import ExperimentConfig, LossConfig
 from dataset.jäger_bomb_dataset import JägerBombDataset
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
@@ -12,7 +12,7 @@ from torchvision.transforms import v2 as T
 from ultralytics.utils.loss import v8DetectionLoss
 from dataset.letter_box_transform import LetterBoxTransform
 from ultralytics.utils.loss import v8DetectionLoss
-from engine.data import TrainerConfig, TrainerState
+from engine.data import LossFunc, TrainerConfig, TrainerState
 from dataset.yolo_compose import YOLOCompose
 from types import SimpleNamespace
 
@@ -27,48 +27,74 @@ class TrainingFactory:
         self.cfg = cfg
 
     def _create_yolo_model(self) -> YOLO:
-        model = YOLO( self.cfg.model, task="detect").load('yolo11n.pt')
-        model.model.args = SimpleNamespace(box=15, cls=0.5, dfl=2.25)
-        return model
+        if self.cfg.model.pretrained:
+            click.secho("[INFO] Loading pretrained YOLOv11n model weights", fg="blue")
+            return YOLO( self.cfg.model.type, task="detect").load('yolo11n.pt')
+        return YOLO( self.cfg.model.type, task="detect")
+    
 
-    def create_transform_list(self, augmentation_mode):
-        if augmentation_mode == "none":
-            return [
-                LetterBoxTransform(new_shape=(640, 640)),
-                T.ToDtype(torch.float32, scale=True)
-            ]
-        if augmentation_mode == "geometric":
-            return [
-                LetterBoxTransform(new_shape=(640, 640)),
-                T.RandomHorizontalFlip(p=0.5),
-                T.RandomVerticalFlip(p=0.5),
-                T.RandomPerspective(distortion_scale=0.2, p=0.5, fill=114),
-                T.RandomRotation(degrees=(-15, 15), expand=False, fill=114),
-                T.ToDtype(torch.float32, scale=True)
-            ]
-        if augmentation_mode == "light":
-            return [
-                LetterBoxTransform(new_shape=(640, 640)),
-                T.ColorJitter(brightness=0.5, saturation=0.4, hue=0.3),
-                T.ToDtype(torch.float32, scale=True)
-            ]
+    def _light_augmentation(self) -> list:
         return [
-                LetterBoxTransform(new_shape=(640, 640)),
-                T.RandomHorizontalFlip(p=0.5),
-                T.RandomVerticalFlip(p=0.5),
-                T.RandomPerspective(distortion_scale=0.2, p=0.5,fill=114),
-                T.RandomRotation(degrees=(-15, 15), expand=False, fill=114),
-                T.ColorJitter(brightness=0.5, saturation=0.4, hue=0.3),
-                T.ToDtype(torch.float32, scale=True)
-            ]
+            LetterBoxTransform(new_shape=(640, 640)),
+            T.ColorJitter(brightness=0.5, saturation=0.4, hue=0.3),
+            T.ToDtype(torch.float32, scale=True)
+        ]
+    
+    def _geometric_augmentation(self) -> list:
+        return [
+            LetterBoxTransform(new_shape=(640, 640)),
+            T.RandomHorizontalFlip(p=0.5),
+            T.RandomVerticalFlip(p=0.5),
+            T.RandomPerspective(distortion_scale=0.2, p=0.5, fill=114),
+            T.RandomRotation(degrees=(-15, 15), expand=False, fill=114),
+            T.ToDtype(torch.float32, scale=True)
+        ]
+    
+    def _no_augmentation(self) -> list:
+        return [
+            LetterBoxTransform(new_shape=(640, 640)),
+            T.ToDtype(torch.float32, scale=True)
+        ]
+    
+    def _full_augmentation(self) -> list:
+        return [
+            LetterBoxTransform(new_shape=(640, 640)),
+            T.RandomHorizontalFlip(p=0.5),
+            T.RandomVerticalFlip(p=0.5),
+            T.RandomPerspective(distortion_scale=0.2, p=0.5,fill=114),
+            T.RandomRotation(degrees=(-15, 15), expand=False, fill=114),
+            T.ColorJitter(brightness=0.5, saturation=0.4, hue=0.3),
+            T.ToDtype(torch.float32, scale=True)
+        ]
+    
+    def _final_augmentation(self) -> list:
+        return [
+            LetterBoxTransform(new_shape=(640, 640)),
+            T.RandomHorizontalFlip(p=0.5),
+            T.RandomVerticalFlip(p=0.5),
+            T.ColorJitter(brightness=0.5, saturation=0.4, hue=0.3),
+            T.ToDtype(torch.float32, scale=True)
+        ]
 
-    def _create_datasets(self, train_transforms, val_transforms) -> Tuple[JägerBombDataset, JägerBombDataset, JägerBombDataset]:
+    def create_transform_list(self, augmentation_mode : str) -> list:
+        augmentation_dict = {
+            "light": self._light_augmentation,
+            "geometric": self._geometric_augmentation,
+            "none": self._no_augmentation,
+            "full": self._full_augmentation,
+            "final": self._final_augmentation
+        }
+        if augmentation_mode not in augmentation_dict:
+            raise ValueError(f"Unsupported augmentation mode: {augmentation_mode}")
+        return augmentation_dict[augmentation_mode]()
+
+    def _create_datasets(self, train_transforms : list, val_transforms : list) -> Tuple[JägerBombDataset, JägerBombDataset, JägerBombDataset]:
         train_ds = JägerBombDataset(self.cfg.paths.train, transforms=YOLOCompose(train_transforms))
         val_ds   = JägerBombDataset(self.cfg.paths.val, transforms=YOLOCompose(val_transforms))
         test_ds  = JägerBombDataset(self.cfg.paths.test, transforms=YOLOCompose(val_transforms))
         return train_ds, val_ds, test_ds
 
-    def _create_dataloaders(self, train_ds, val_ds, test_ds) -> Tuple[DataLoader, DataLoader, DataLoader]:
+    def _create_dataloaders(self, train_ds : JägerBombDataset, val_ds : JägerBombDataset, test_ds : JägerBombDataset) -> Tuple[DataLoader, DataLoader, DataLoader]:
         generator = torch.Generator(torch.get_default_device().type)
         train_dl = DataLoader(train_ds, batch_size=self.cfg.training.batch_size,
                               shuffle=True, collate_fn=collate_fn, generator=generator)
@@ -93,7 +119,7 @@ class TrainingFactory:
                     g[0].append(param)
         return g
 
-    def _create_optimizer(self, torch_model) -> torch.optim.Optimizer:
+    def _create_optimizer(self, torch_model : torch.nn.Module) -> torch.optim.Optimizer:
         weights, bn_no_decay, biases = self._create_optimizer_param_groups(torch_model)
         optimizer_type = self.cfg.optimizer.type.upper()
         momentum = self.cfg.optimizer.momentum
@@ -132,8 +158,9 @@ class TrainingFactory:
         click.echo(f"Learning rate: fixed at {lr:.6f}")
         return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda epoch: 1.0)
 
-    def create_loss_func(self, torch_model, loss_type):
-        if loss_type == "spatial_consistency":
+    def create_loss_func(self, torch_model : torch.nn.Module, loss_type : LossConfig) -> LossFunc:
+        torch_model.args = SimpleNamespace(box=7.5, cls=0.5, dfl=1.5)
+        if loss_type.type == "spatial_consistency":
             click.secho("[INFO] Using spatial consistency loss (JägerBombLoss)", fg="blue")
             return JägerBombLoss(torch_model, lamda_rate=1)
         click.secho("[INFO] Using standard YOLO loss (v8DetectionLoss)", fg="blue")
@@ -153,7 +180,6 @@ class TrainingFactory:
         trainer_cfg = TrainerConfig(
             epochs=self.cfg.training.epochs,
             log_interval=self.cfg.training.log_interval,
-            use_ema=self.cfg.use_ema,
             experiment_name=self.cfg.experiment_name,
         )
 

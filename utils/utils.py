@@ -5,7 +5,15 @@ import torch
 
 import yaml
 
-from configs import ExperimentConfig, FreezeConfig, OptimizerConfig, PathsConfig, TrainingConfig
+from configs import (
+    ExperimentConfig, 
+    FreezeConfig, 
+    OptimizerConfig,
+    PathsConfig, 
+    TrainingConfig,
+    ModelConfig,
+    LossConfig
+)
 import random
 import tempfile
 import os
@@ -17,15 +25,14 @@ def load_config(path: str) -> ExperimentConfig:
 
     return ExperimentConfig(
         experiment_name = cfg_dict["experiment_name"],
-        model = cfg_dict["model"],
+        model = ModelConfig(**cfg_dict["model"]),
         paths = PathsConfig(**cfg_dict["paths"]),
         training = TrainingConfig(**cfg_dict["training"]),
         optimizer = OptimizerConfig(**cfg_dict["optimizer"]),
         freeze = FreezeConfig(**cfg_dict["freeze"]),
         augmentation = cfg_dict["augmentation"],
         dataset_size = cfg_dict["dataset_size"],
-        use_ema = cfg_dict["use_ema"],
-        loss_type = cfg_dict["loss_type"]
+        loss_type = LossConfig(**cfg_dict["loss"])
     )
 
 def convert_to_python_types(obj):

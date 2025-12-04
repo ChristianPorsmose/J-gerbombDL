@@ -1,7 +1,10 @@
 {
     'experiment_name': 'phase1a_adamw_standard',
 
-    'model': 'models/custom_yolo.yaml',
+    'model': {
+        type : 'models/custom_yolo.yaml',
+        pretrained: False
+    },
 
     'paths': {
         'train': 'dataset_final_boxes_yolo/train.txt',
@@ -32,7 +35,10 @@
 
     'augmentation': 'none',
     'dataset_size': 1.0,
-    'use_ema': False,
 
-    'loss_type': 'standard'
+    'loss': {
+        type: 'spatial_consistency',
+        lamda_rate: 120,
+        proportion: 0.5
+    }
 }

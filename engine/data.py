@@ -11,7 +11,6 @@ from metrics.metrics import Metrics
 class TrainerConfig:
     epochs: int
     log_interval: int
-    use_ema: bool
     experiment_name: str
 
 type LossFunc = Callable[..., tuple[torch.Tensor, torch.Tensor]]
