@@ -12,5 +12,9 @@ def log_warning(msg: str):
 def log_error(msg: str):
     click.secho(f"[ERROR] {msg}", fg="red")
 
+
+def log_debug(msg : str):
+    click.secho(f"[DEBUG] {msg}", fg="cyan")
+
 def log(message: str, *args, **kwargs):
     click.echo(message, *args, **kwargs)

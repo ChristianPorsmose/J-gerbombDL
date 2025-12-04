@@ -31,14 +31,12 @@ class JägerBombMetricLogger:
         Log epoch results to CSV and print to terminal.
         """ 
         metrics = batchResult.metrics
-        log(
-            f"METRICS — Epoch {epoch}: "
-            f"P: {metrics.precision:.4f}, "
-            f"R: {metrics.recall:.4f}, "
-            f"mAP50: {metrics.mAP50:.4f}, "
-            f"mAP50-95: {metrics.mAP50_95:.4f}"   
-        )
-
+        log(f"METRICS — Epoch {epoch}: ")
+        log(f"P: {metrics.precision:.4f}, ")
+        log(f"R: {metrics.recall:.4f}, ")
+        log(f"mAP50: {metrics.mAP50:.4f}, ")
+        log(f"mAP50-95: {metrics.mAP50_95:.4f}")   
+        
         row = [
             epoch,
             batchResult.train_loss.box,

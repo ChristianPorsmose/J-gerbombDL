@@ -114,11 +114,12 @@ def _draw_ground_truth_boxes(batch_dict, colors, labels, ax, h, w, img_mask):
         ax.add_patch(rect)
     
     
-def visualize_predictions(self, epoch, model, data_loader, device):
+def visualize_predictions(epoch, model, data_loader, save_dir : Path):
+    device = torch.get_default_device().type
     """Run model on validation set and visualize predictions."""
     model.eval()
     
-    save_dir = Path(self.save_dir) / "visualizations" / f"epoch{epoch:03d}_predictions"
+    save_dir = save_dir / "visualizations" / f"epoch{epoch:03d}_predictions"
     save_dir.mkdir(parents=True, exist_ok=True)
     
     colors = {0: RED, 1: BLUE}

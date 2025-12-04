@@ -37,7 +37,7 @@ class JägerBombTrainer:
         save_dir.mkdir(parents=True, exist_ok=True)
         self.metric_tracker = JägerBombMetricTracker(
             self.state.model.names,
-            save_dir=str(save_dir)
+            save_dir=Path(save_dir)
         )
         self.metrics_logger = JägerBombMetricLogger(
             file_path=save_dir / "metrics.csv"
@@ -55,8 +55,14 @@ class JägerBombTrainer:
 
         loss = self._evaluate(None,self.state.test_loader, "TEST RESULTS")
         results_path = self.metric_tracker.save_dir / "test_results.json"
+
+        print("LOSS DATA:", asdict(loss))
+        print("TYPES:", {k: type(v) for k, v in asdict(loss).items()})
+
+        # FIX ME: THIS IS TOO HACKY, LOSSCOMPONENT SHOULD ALWAYS BE FLOATS
+        loss_dict = {k: float(v) for k, v in asdict(loss).items()}
         with open(results_path, 'w') as f:
-            json.dump(asdict(loss), f, indent=2)
+            json.dump(loss_dict, f, indent=2)
     
     @torch.no_grad()
     def _evaluate(self, epoch, loader, header : str = "VALIDATION") -> LossComponent:
@@ -73,7 +79,7 @@ class JägerBombTrainer:
             
             batch = self._prepare_batch_dict(X_val, y_val)
             
-            pred_val =  self.torch_model(X_val)
+            pred_val = self.torch_model(X_val)
             
             _, last_loss = self.state.loss_fn(pred_val, batch)
             loss_values = last_loss.cpu().numpy().round(3)
@@ -166,7 +172,7 @@ class JägerBombTrainer:
             generate_plots = (epoch == self.cfg.epochs - 1)
             
             if generate_plots:
-                visualize_predictions(epoch, self.torch_model, self.state.val_loader, self.device)
+                visualize_predictions(epoch, self.torch_model, self.state.val_loader, self.metric_tracker.save_dir)
             
             det_metrics = self.metric_tracker.compute(plot=generate_plots)
 

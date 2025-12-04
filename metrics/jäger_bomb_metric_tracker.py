@@ -17,7 +17,7 @@ class JägerBombMetricTracker:
     def __init__(self, names,save_dir : Path):
         self.save_dir = save_dir
         self.names = names
-
+        self.nc = len(names)
         # IoU thresholds for mAP calculation
         self.iouv = torch.linspace(0.5, 0.95, 10)
         self.niou = self.iouv.numel() 
@@ -29,7 +29,7 @@ class JägerBombMetricTracker:
         self.confusion_matrix = ConfusionMatrix(names=self.names, task="detect")
         self.seen = 0
 
-    def prepare_batch(y_val, img_w, img_h) -> dict:
+    def prepare_batch(self, y_val, img_w, img_h) -> dict:
         all_gt_cls = []
         all_gt_bboxes = []
         all_batch_idx = []
@@ -124,6 +124,7 @@ class JägerBombMetricTracker:
             conf_thres: Confidence threshold for predictions
             iou_thres: IoU threshold for NMS
         """
+        print("DEBUG !!!!!")
         
         # Get raw predictions
         if isinstance(preds, (list, tuple)):
@@ -167,13 +168,14 @@ class JägerBombMetricTracker:
                 continue
             
             pred_bboxes, pred_conf, pred_cls = self.get_predictions(pred)
-            
+
             pred_dict = {'bboxes': pred_bboxes, 'conf': pred_conf, 'cls': pred_cls}
             gt_dict = {'bboxes': gt_bboxes, 'cls': gt_cls}
+
             self.confusion_matrix.process_batch(pred_dict, gt_dict)
             
             correct = self._process_batch(pred_bboxes, pred_cls, gt_bboxes, gt_cls)
-            
+
             stats_update = {
                 'tp': correct,
                 'conf': pred_conf.cpu().numpy(),

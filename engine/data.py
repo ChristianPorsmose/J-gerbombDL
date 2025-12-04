@@ -1,5 +1,5 @@
 from torch.utils.data import DataLoader
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional, Union, TypeAlias, Tuple
 from dataclasses import dataclass
 import torch.optim as optim
 from typing import Any
@@ -13,7 +13,7 @@ class TrainerConfig:
     log_interval: int
     experiment_name: str
 
-type LossFunc = Callable[..., tuple[torch.Tensor, torch.Tensor]]
+LossFunc: TypeAlias = Callable[..., Tuple[torch.Tensor, torch.Tensor]]
 
 @dataclass
 class TrainerState:
