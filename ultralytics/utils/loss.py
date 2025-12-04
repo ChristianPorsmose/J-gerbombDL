@@ -254,7 +254,7 @@ class v8DetectionLoss:
         dtype = pred_scores.dtype
         batch_size = pred_scores.shape[0]
         imgsz = torch.tensor(feats[0].shape[2:], device=self.device, dtype=dtype) * self.stride[0]  # image size (h,w)
-        anchor_points, stride_tensor = make_anchors(feats, self.stride, 0.5)
+        anchor_points, self.stride_tensor = make_anchors(feats, self.stride, 0.5)
 
         # Targets
         targets = torch.cat((batch["batch_idx"].view(-1, 1), batch["cls"].view(-1, 1), batch["bboxes"]), 1)
@@ -263,36 +263,36 @@ class v8DetectionLoss:
         mask_gt = gt_bboxes.sum(2, keepdim=True).gt_(0.0)
 
         # Pboxes
-        pred_bboxes = self.bbox_decode(anchor_points, pred_distri)  # xyxy, (b, h*w, 4)
+        self.pred_bboxes = self.bbox_decode(anchor_points, pred_distri)  # xyxy, (b, h*w, 4)
         # dfl_conf = pred_distri.view(batch_size, -1, 4, self.reg_max).detach().softmax(-1)
         # dfl_conf = (dfl_conf.amax(-1).mean(-1) + dfl_conf.amax(-1).amin(-1)) / 2
 
-        _, target_bboxes, target_scores, fg_mask, _ = self.assigner(
+        _, self.target_bboxes, self.target_scores, self.fg_mask, _ = self.assigner(
             # pred_scores.detach().sigmoid() * 0.8 + dfl_conf.unsqueeze(-1) * 0.2,
             pred_scores.detach().sigmoid(),
-            (pred_bboxes.detach() * stride_tensor).type(gt_bboxes.dtype),
-            anchor_points * stride_tensor,
+            (self.pred_bboxes.detach() * self.stride_tensor).type(gt_bboxes.dtype),
+            anchor_points * self.stride_tensor,
             gt_labels,
             gt_bboxes,
             mask_gt,
         )
 
-        target_scores_sum = max(target_scores.sum(), 1)
+        target_scores_sum = max(self.target_scores.sum(), 1)
 
         # Cls loss
         # loss[1] = self.varifocal_loss(pred_scores, target_scores, target_labels) / target_scores_sum  # VFL way
-        loss[1] = self.bce(pred_scores, target_scores.to(dtype)).sum() / target_scores_sum  # BCE
+        loss[1] = self.bce(pred_scores, self.target_scores.to(dtype)).sum() / target_scores_sum  # BCE
 
         # Bbox loss
-        if fg_mask.sum():
+        if self.fg_mask.sum():
             loss[0], loss[2] = self.bbox_loss(
                 pred_distri,
-                pred_bboxes,
+                self.pred_bboxes,
                 anchor_points,
-                target_bboxes / stride_tensor,
-                target_scores,
+                self.target_bboxes / self.stride_tensor,
+                self.target_scores,
                 target_scores_sum,
-                fg_mask,
+                self.fg_mask,
             )
 
         loss[0] *= self.hyp.box  # box gain

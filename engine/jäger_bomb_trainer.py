@@ -165,7 +165,6 @@ class JägerBombTrainer:
             
             average_train_loss = epoch_train_losses / batch_count
 
-            
             val_losses = self._evaluate(epoch, self.state.val_loader)
             # Compute detection metrics and generate plots every N epochs or at end
             generate_plots = (epoch == self.cfg.epochs - 1)

@@ -37,7 +37,3 @@ def main(config):
 
 if __name__ == "__main__":
     main()
-
-
-
-# freeze_backbone should return params_to_train 

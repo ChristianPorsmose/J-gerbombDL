@@ -1,144 +1,125 @@
+import torch
+import torch.nn.functional as F
 from ultralytics.utils.loss import v8DetectionLoss
 from ultralytics.utils.tal import make_anchors
-import torch 
+
+SHOT_IDX = 0
+CUP_IDX = 1
 
 class JägerBombLoss(v8DetectionLoss):
-    def __init__(self, model, tal_topk = 10, lamda_rate = 0.001):
+    def __init__(self, model, tal_topk=10, lamda_rate=0.001): #proportion=0.5):
         super().__init__(model, tal_topk)
         self.lamda_rate = lamda_rate
+        #self.proportion = proportion
+        # Define your class indices here
 
-    
     def __call__(self, preds, batch):
-        """Calculate loss including spatial consistency on predicted boxes."""
-        # Get standard detection loss from parent class
-        loss, loss_item = super().__call__(preds, batch)
-        
-        # Now compute spatial loss on predictions
-        feats = preds[1] if isinstance(preds, tuple) else preds
-        pred_distri, pred_scores = torch.cat([xi.view(feats[0].shape[0], self.no, -1) for xi in feats], 2).split(
-            (self.reg_max * 4, self.nc), 1
-        )
+        """
+        Compute loss vector: [box, cls, dfl, containment].
+        Returns:
+            loss_vector: (4,) tensor, per-component loss
+            detached_losses: (4,) tensor, detached for logging
+        """
+        loss, detached_losses = super().__call__(preds, batch)
 
-        pred_scores = pred_scores.permute(0, 2, 1).contiguous()
-        pred_distri = pred_distri.permute(0, 2, 1).contiguous()
+        containment_loss = self._calculate_containment_loss_assigned(
+            self.pred_bboxes * self.stride_tensor,
+            self.target_bboxes * self.stride_tensor,
+            self.target_scores,
+            self.fg_mask
+        ) * self.lamda_rate
 
-        dtype = pred_scores.dtype
-        batch_size = pred_scores.shape[0]
-        imgsz = torch.tensor(feats[0].shape[2:], device=self.device, dtype=dtype) * self.stride[0]
-        anchor_points, stride_tensor = make_anchors(feats, self.stride, 0.5)
+        loss_vector = torch.zeros(4, device=self.device)
+        loss_vector[:3] = loss  # box, cls, dfl
+        loss_vector[3] = containment_loss
+        detached_vector = torch.zeros_like(loss_vector)
+        detached_vector[:3] = detached_losses
+        detached_vector[3] = containment_loss.detach()
+        return loss_vector, detached_vector
 
-        # Preprocess ground truth targets
-        targets = torch.cat((batch["batch_idx"].view(-1, 1), batch["cls"].view(-1, 1), batch["bboxes"]), 1)
-        targets = self.preprocess(targets, batch_size, scale_tensor=imgsz[[1, 0, 1, 0]])
-        gt_labels, gt_bboxes = targets.split((1, 4), 2)  # cls, xyxy
-        mask_gt = gt_bboxes.sum(2, keepdim=True).gt_(0.0)
+    def _box_intersection(self, boxes1, boxes2):
+        """
+        Vectorized intersection calculation.
+        boxes1: (N, 4) xyxy
+        boxes2: (N, 4) xyxy
+        Returns: (N,) intersection area
+        """
+        b1_x1, b1_y1, b1_x2, b1_y2 = boxes1.chunk(4, dim=1)
+        b2_x1, b2_y1, b2_x2, b2_y2 = boxes2.chunk(4, dim=1)
 
-        # Decode predictions to bboxes
-        pred_bboxes = self.bbox_decode(anchor_points, pred_distri)  # xyxy, (b, h*w, 4)
+        inter_x1 = torch.max(b1_x1, b2_x1)
+        inter_y1 = torch.max(b1_y1, b2_y1)
+        inter_x2 = torch.min(b1_x2, b2_x2)
+        inter_y2 = torch.min(b1_y2, b2_y2)
 
-        # Run TAL assigner to match predictions to ground truth
-        _, target_bboxes, target_scores, fg_mask, target_gt_idx = self.assigner(
-            pred_scores.detach().sigmoid(),
-            (pred_bboxes.detach() * stride_tensor).type(gt_bboxes.dtype),
-            anchor_points * stride_tensor,
-            gt_labels,
-            gt_bboxes,
-            mask_gt,
-        )
+        inter_w = (inter_x2 - inter_x1).clamp(min=0)
+        inter_h = (inter_y2 - inter_y1).clamp(min=0)
 
-        # ===== SPATIAL CONSISTENCY LOSS ON PREDICTIONS =====
-        radial_loss = 0.0
-        
-        # Convert pred_bboxes to pixel coordinates once (multiply by stride per anchor)
-        pred_bboxes_pixels = (pred_bboxes * stride_tensor).detach()
-        
-        for i_img in range(batch_size):
-            # Get predictions for this image that were matched (foreground)
-            img_fg_mask = fg_mask[i_img]  # [h*w] boolean mask
-            
-            if not img_fg_mask.any():
-                continue
-            
-            # Get predicted boxes and their assigned GT classes
-            pred_boxes_matched = pred_bboxes_pixels[i_img][img_fg_mask]  # [N, 4] xyxy in pixels
-            gt_idx_matched = target_gt_idx[i_img][img_fg_mask]  # [N] indices into gt_labels/gt_bboxes
-            
-            # Get the ground truth classes for matched predictions
-            pred_classes = gt_labels[i_img][gt_idx_matched].squeeze(-1)  # [N]
-            
-            # Separate predicted shots and cups
-            shot_mask = pred_classes == 0
-            cup_mask = pred_classes == 1
-            
-            pred_shots = pred_boxes_matched[shot_mask]
-            pred_cups = pred_boxes_matched[cup_mask]
-            
-            radial_loss += self._radial_containment_loss(pred_shots, pred_cups)
-
-        # Average spatial loss over batch
-        radial_loss = radial_loss / batch_size
-        
-        # Extend loss tensor from [box, cls, dfl] to [box, cls, dfl, spatial]
-        weighted_spatial = self.lamda_rate * radial_loss * batch_size
-        loss = torch.cat([loss, weighted_spatial.unsqueeze(0)])
-        
-        # Extend loss_item for logging
-        loss_item = torch.cat([loss_item, radial_loss.unsqueeze(0)])
-
-        return loss, loss_item
+        return (inter_w * inter_h).squeeze()
     
-
-    def _radial_containment_loss(self, gt_shots, gt_cups):
+    def _calculate_containment_loss_assigned(self, pred_bboxes, target_bboxes, target_scores, fg_mask):
         """
-        Bi-directional spatial consistency loss:
-        1. Each shot must be inside a cup (shot → cup)
-        2. Each cup must contain a shot (cup → shot)
+        Compute containment using assigned positives:
+        - Use fg_mask anchors
+        - Use target_scores to get class labels
         """
-        # FIX ME: den her skal lige tænkes over ( det skal være et og )
-        if len(gt_shots) == 0 or len(gt_cups) == 0:
-            if(len(gt_shots) != len(gt_cups)):
-                return torch.tensor(10, device=gt_cups.device)
-            return torch.tensor(0.0, device=gt_cups.device)
+        device = pred_bboxes.device
+        total = torch.tensor(0.0, device=device)
 
-        # Compute centers and radii
-        def center_and_radius(box):
-            x1, y1, x2, y2 = box.unbind(-1)
-            cx = (x1 + x2) / 2
-            cy = (y1 + y2) / 2
-            rw = (x2 - x1) / 2
-            rh = (y2 - y1) / 2
-            r = torch.sqrt(rw * rh)  # geometric mean
-            return cx, cy, r
-        
-        cx_s, cy_s, r_s = center_and_radius(gt_shots)
-        cx_c, cy_c, r_c = center_and_radius(gt_cups)
+        # Select positives
+        if not fg_mask.any():
+            return total
 
-        # Pairwise distances: shape [num_shots, num_cups]
-        dist = torch.sqrt((cx_s[:, None] - cx_c[None, :])**2 +
-                        (cy_s[:, None] - cy_c[None, :])**2)
+        # Indices of positives per batch element
+        # fg_mask: (B, N) -> per-image masks
+        B = fg_mask.shape[0]
+        for b in range(B):
+            pos = fg_mask[b]
+            if not pos.any():
+                continue
 
-        # ===== LOSS 1: Shot → Cup containment =====
-        # Each shot should be inside its nearest cup
-        nearest_cup_per_shot = dist.argmin(dim=1)
-        d_shot_to_cup = dist[torch.arange(len(dist)), nearest_cup_per_shot]
-        r_c_matched = r_c[nearest_cup_per_shot]
-        
-        # Violation: shot center is outside the cup's radius
-        violation_shot = d_shot_to_cup + r_s - r_c_matched
-        loss_shot = torch.relu(violation_shot).mean()
-        
-        # ===== LOSS 2: Cup → Shot containment =====
-        # Each cup should contain at least one shot inside it
-        nearest_shot_per_cup = dist.argmin(dim=0)  # For each cup, find nearest shot
-        d_cup_to_shot = dist.T[torch.arange(len(dist.T)), nearest_shot_per_cup]
-        r_s_matched = r_s[nearest_shot_per_cup]
-        
-        # Violation: nearest shot is outside the cup's radius
-        # Cup should contain the shot, so shot must be within cup radius
-        violation_cup = d_cup_to_shot + r_s_matched - r_c
-        loss_cup = torch.relu(violation_cup).mean()
-        
-        # Combined loss
-        total_loss = (loss_shot + loss_cup) / 2
-        #print(f"Spatial loss → shot→cup: {loss_shot:.4f}, cup→shot: {loss_cup:.4f}, total: {total_loss:.4f}")
-        return total_loss
+            # Predicted boxes at positives
+            pos_pred_boxes = pred_bboxes[b, pos]  # (M, 4)
+            # Target boxes at positives (closest GT assigned)
+            pos_tgt_boxes = target_bboxes[b, pos]  # (M, 4)
+            # Class scores at positives
+            pos_scores = target_scores[b, pos]     # (M, C)
+            if pos_scores.numel() == 0:
+                continue
+
+            # Class ids from target scores (argmax over classes with non-zero score)
+            cls_ids = pos_scores.argmax(dim=1)     # (M,)
+
+            # Split shots vs cups
+            shot_mask = cls_ids == SHOT_IDX
+            cup_mask = cls_ids == CUP_IDX
+
+            shot_boxes = pos_pred_boxes[shot_mask]
+            cup_boxes = pos_pred_boxes[cup_mask]
+
+            if shot_boxes.shape[0] == 0 or cup_boxes.shape[0] == 0:
+                continue
+
+            # Centers
+            shot_centers = (shot_boxes[:, :2] + shot_boxes[:, 2:]) / 2
+            cup_centers = (cup_boxes[:, :2] + cup_boxes[:, 2:]) / 2
+
+            dists = torch.cdist(shot_centers, cup_centers, p=2)
+
+            # Shot -> nearest cup
+            _, nearest_cup_idx = dists.min(dim=1)
+            nearest_cups = cup_boxes[nearest_cup_idx]
+            inter1 = self._box_intersection(shot_boxes, nearest_cups)
+            shot_area = (shot_boxes[:, 2] - shot_boxes[:, 0]) * (shot_boxes[:, 3] - shot_boxes[:, 1])
+            loss1 = (1.0 - (inter1 / (shot_area + 1e-6))).clamp(min=0).mean()
+
+            # Cup -> nearest shot
+            _, nearest_shot_idx = dists.min(dim=0)
+            nearest_shots = shot_boxes[nearest_shot_idx]
+            inter2 = self._box_intersection(nearest_shots, cup_boxes)
+            shot_area2 = (nearest_shots[:, 2] - nearest_shots[:, 0]) * (nearest_shots[:, 3] - nearest_shots[:, 1])
+            loss2 = (1.0 - (inter2 / (shot_area2 + 1e-6))).clamp(min=0).mean()
+
+            total += (loss1 + loss2) / 2.0
+
+        return total / B
