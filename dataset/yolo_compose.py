@@ -1,7 +1,7 @@
 
 from torchvision.transforms import v2 as T
 import torch
-from letter_box_transform import LetterBoxTransform
+from dataset.letter_box_transform import LetterBoxTransform
 
 
 class YOLOCompose:

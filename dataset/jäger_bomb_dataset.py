@@ -30,8 +30,7 @@ class JägerBombDataset(Dataset):
 
         i = 0
         for file_name in file.readlines():
-            #print(f"Processing file list: {file_name.strip()}")
-            full_name = "../" + file_name.strip()
+            full_name = file_name.strip()
             self.image_files.append(full_name)
             i += 1
 

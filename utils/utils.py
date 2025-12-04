@@ -1,3 +1,4 @@
+from dataclasses import fields, is_dataclass
 import numpy as np
 from pathlib import Path
 import torch
@@ -100,4 +101,3 @@ def create_experiment_train_path(params, train_data_path):
     else:
         click.secho(f"[INFO] Dataset size: Using all {len(all_train_paths)} training images", fg="blue")
     return train_data_path
-

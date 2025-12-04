@@ -1,17 +1,20 @@
-from configs import ExperimentConfig, TrainingConfig, TrainerState
-from jäger_bomb_dataset import JägerBombDataset
+from configs import ExperimentConfig
+from dataset.jäger_bomb_dataset import JägerBombDataset
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
 import torch
 from typing import Tuple
 import click
-from jäger_bomb_loss import JägerBombLoss
+from engine.jäger_bomb_loss import JägerBombLoss
 from ultralytics.models import YOLO
 import math
 from torchvision.transforms import v2 as T
 from ultralytics.utils.loss import v8DetectionLoss
-from letter_box_transform import LetterBoxTransform
+from dataset.letter_box_transform import LetterBoxTransform
 from ultralytics.utils.loss import v8DetectionLoss
+from engine.data import TrainerConfig, TrainerState
+from dataset.yolo_compose import YOLOCompose
+from types import SimpleNamespace
 
 def collate_fn(batch):
     images, targets = zip(*batch)
@@ -24,7 +27,9 @@ class TrainingFactory:
         self.cfg = cfg
 
     def _create_yolo_model(self) -> YOLO:
-        return YOLO( self.cfg.model, task="detect").load('yolo11n.pt')
+        model = YOLO( self.cfg.model, task="detect").load('yolo11n.pt')
+        model.model.args = SimpleNamespace(box=15, cls=0.5, dfl=2.25)
+        return model
 
     def create_transform_list(self, augmentation_mode):
         if augmentation_mode == "none":
@@ -58,18 +63,19 @@ class TrainingFactory:
             ]
 
     def _create_datasets(self, train_transforms, val_transforms) -> Tuple[JägerBombDataset, JägerBombDataset, JägerBombDataset]:
-        train_ds = JägerBombDataset(self.cfg.paths.train, transforms=train_transforms)
-        val_ds   = JägerBombDataset(self.cfg.paths.val, transforms=val_transforms)
-        test_ds  = JägerBombDataset(self.cfg.paths.test, transforms=val_transforms)
+        train_ds = JägerBombDataset(self.cfg.paths.train, transforms=YOLOCompose(train_transforms))
+        val_ds   = JägerBombDataset(self.cfg.paths.val, transforms=YOLOCompose(val_transforms))
+        test_ds  = JägerBombDataset(self.cfg.paths.test, transforms=YOLOCompose(val_transforms))
         return train_ds, val_ds, test_ds
 
     def _create_dataloaders(self, train_ds, val_ds, test_ds) -> Tuple[DataLoader, DataLoader, DataLoader]:
+        generator = torch.Generator(torch.get_default_device().type)
         train_dl = DataLoader(train_ds, batch_size=self.cfg.training.batch_size,
-                              shuffle=True, collate_fn=collate_fn)
+                              shuffle=True, collate_fn=collate_fn, generator=generator)
         val_dl = DataLoader(val_ds, batch_size=self.cfg.training.batch_size,
-                            shuffle=False, collate_fn=collate_fn)
+                            shuffle=False, collate_fn=collate_fn, generator=generator)
         test_dl = DataLoader(test_ds, batch_size=self.cfg.training.batch_size,
-                             shuffle=False, collate_fn=collate_fn)
+                             shuffle=False, collate_fn=collate_fn, generator=generator)
         return train_dl, val_dl, test_dl
 
     def _create_optimizer_param_groups(self, torch_model) -> list:
@@ -133,33 +139,26 @@ class TrainingFactory:
         click.secho("[INFO] Using standard YOLO loss (v8DetectionLoss)", fg="blue")
         return v8DetectionLoss(torch_model)
 
-    def create(self) -> Tuple[TrainingConfig, TrainerState]:
-        torch_model = self._create_yolo_model().model
+    def create(self) -> Tuple[TrainerConfig, TrainerState]:
+        model = self._create_yolo_model()
+        torch_model = model.model
         train_transforms = self.create_transform_list(self.cfg.augmentation)
-        val_transforms = self.create_transform_list(self.cfg.augmentation)
+        val_transforms = self.create_transform_list("none")
         train_ds, val_ds, test_ds = self._create_datasets(train_transforms, val_transforms)
         train_dl, val_dl, test_dl = self._create_dataloaders(train_ds, val_ds, test_ds)
         optimizer = self._create_optimizer(torch_model)
         scheduler = self.create_scheduler(optimizer)
         loss_fn = self.create_loss_func(torch_model, self.cfg.loss_type)
 
-        trainer_cfg = TrainingConfig(
-            model=torch_model,
-            train_loader=train_dl,
-            val_loader=val_dl,
-            test_loader=test_dl,
-            optimizer=optimizer,
-            scheduler=scheduler,
-            loss_fn=loss_fn,
-            batch_size=self.cfg.training.batch_size,
+        trainer_cfg = TrainerConfig(
             epochs=self.cfg.training.epochs,
             log_interval=self.cfg.training.log_interval,
-            save_interval=self.cfg.training.save_interval,
-            save_path=self.cfg.training.save_path
+            use_ema=self.cfg.use_ema,
+            experiment_name=self.cfg.experiment_name,
         )
 
         trainer_state = TrainerState(
-            model=torch_model,
+            model=model,
             optimizer=optimizer,
             scheduler=scheduler,
             loss_fn=loss_fn,

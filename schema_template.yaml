@@ -1,12 +1,12 @@
 {
     'experiment_name': 'phase1a_adamw_standard',
 
-    'model': 'custom_yolo.yaml',
+    'model': 'models/custom_yolo.yaml',
 
     'paths': {
-        'train': '/home/dl01e25/dataset_final_boxes_yolo/train.txt',
-        'val': '/home/dl01e25/dataset_final_boxes_yolo/val.txt',
-        'test': '/home/dl01e25/dataset_final_boxes_yolo/test.txt',
+        'train': 'dataset_final_boxes_yolo/train.txt',
+        'val': 'dataset_final_boxes_yolo/val.txt',
+        'test': 'dataset_final_boxes_yolo/test.txt',
     },
 
     'training': {

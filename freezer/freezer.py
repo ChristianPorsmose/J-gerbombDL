@@ -11,7 +11,7 @@ class Freezer:
         """Unfreeze all model parameters for training."""
         for _, param in self.model.named_parameters():
             param.requires_grad = True
-            click.secho("[SUCCESS] All model layers unfrozen and ready for training", fg="green")
+        click.secho("[SUCCESS] All model layers unfrozen and ready for training", fg="green")
 
     def freeze_backbone_layers(self, num_layers: int):
         """Freeze the backbone layers of the model (first N layers before detection head)."""

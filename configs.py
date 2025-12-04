@@ -1,12 +1,4 @@
-from torch.utils.data import DataLoader
-from typing import Any
 from dataclasses import dataclass
-import torch.nn as nn
-import torch.optim as optim
-from dataclasses import dataclass
-from typing import Any
-
-from ultralytics.models.yolo.model import YOLO
 
 @dataclass
 class PathsConfig:
@@ -47,23 +39,3 @@ class ExperimentConfig:
     dataset_size: float
     use_ema: bool
     loss_type: str
-
-@dataclass
-class TrainerConfig:
-    epochs: int
-    log_interval: int
-    use_ema: bool
-    experiment_name: str
-    loss_type: str
-    device: str
-
-@dataclass
-class TrainerState:
-    model: YOLO
-    optimizer: optim.Optimizer
-    scheduler: Any
-    loss_fn: Any
-
-    train_loader: DataLoader
-    val_loader: DataLoader
-    test_loader: DataLoader

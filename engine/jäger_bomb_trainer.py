@@ -1,60 +1,56 @@
-from configs import TrainerConfig, TrainerState
 import torch
 import numpy as np
 from pathlib import Path
 from torch import nn
-from utils import xywh_to_xyxy
-from jäger_bomb_visualizer import JägerBombVisualizer
-from jäger_bomb_metrics import JägerBombMetrics
-from ultralytics.models import YOLO
-from jäger_bomb_metrics import JägerBombMetrics
+from utils.utils import xywh_to_xyxy
 from datetime import datetime
 import click
 import traceback
+from metrics.jäger_bomb_metric_tracker import JägerBombMetricTracker
+from metrics.jäger_bomb_metric_logger import JägerBombMetricLogger
+from metrics.metric_visualization import plot_all_metrics
+from engine.bomb_visualize import visualize_batch, visualize_predictions
+from engine.data import BatchResult, LossComponent, TrainerConfig, TrainerState
 
 class JägerBombTrainer:
     def __init__(self, cfg: TrainerConfig, state : TrainerState):
         self.cfg = cfg
         self.torch_model : nn.Module = state.model.model
         self.state = state
+        self.device = torch.get_default_device().type
         self._init_grad_scaler()
         self._init_metrics()
-        self.visualizer = JägerBombVisualizer(self.metrics.save_dir)
 
     def _init_grad_scaler(self):
         """Initialize gradient scaler for mixed precision training."""
-        enable = self.cfg.device.startswith('cuda')
-        self.scaler = torch.amp.GradScaler(self.cfg.device, enabled=enable)
+        enable = self.device.startswith('cuda')
+        self.scaler = torch.amp.GradScaler(self.device, enabled=enable)
     
     def _init_metrics(self):
         """Initialize metrics tracking."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         experiment_name = self.cfg.experiment_name
-        save_dir = Path("experiments") / experiment_name / "runs" / f"train_{timestamp}"
-        
-        # FIX ME: DOES THIS NAME STUFF WORK AS EXPECTED?
-        self.metrics = JägerBombMetrics(
-            names=self.state.model.names,
-            save_dir=str(save_dir),
-            device=self.cfg.device
+        save_dir = Path("experiments_results") / experiment_name / "runs" / f"train_{timestamp}"
+        save_dir.mkdir(parents=True, exist_ok=True)
+        self.metric_tracker = JägerBombMetricTracker(
+            self.state.model.names,
+            save_dir=str(save_dir)
         )
-        click.secho(f"[SUCCESS] Metrics tracking initialized → {save_dir}", fg="green")
+        self.metrics_logger = JägerBombMetricLogger(
+            file_path=save_dir / "metrics.csv"
+        )
     
     @torch.no_grad()
     def _validate(self, epoch):
         """Validate model and compute metrics."""
-        self.cfg.model.eval()
+        self.torch_model.eval()
         
-        val_box = 0
-        val_cls = 0
-        val_dfl = 0
-        val_spatial = 0
-        count = 0
+        val_box = val_cls = val_dfl = val_spatial = count = 0
 
-        self.metrics.reset()
+        self.metric_tracker.reset()
         
         for X_val, y_val in self.state.val_loader:
-            X_val, y_val = X_val.to(self.cfg.device), y_val.to(self.cfg.device)
+            X_val, y_val = X_val.to(self.device), y_val.to(self.device)
             
             batch = self._prepare_batch_dict(X_val, y_val)
             
@@ -113,7 +109,7 @@ class JägerBombTrainer:
                 }
             
             try:
-                self.metrics.update(pred_val, metrics_batch)
+                self.metric_tracker.update(pred_val, metrics_batch)
             except Exception as e:
                 click.secho(f"[ERROR] Metrics update failed: {e}", fg="red")
                 traceback.print_exc()
@@ -123,6 +119,7 @@ class JägerBombTrainer:
         avg_cls = val_cls / count
         avg_dfl = val_dfl / count
         avg_spatial = val_spatial / count
+
         avg_total = avg_box + avg_cls + avg_dfl + avg_spatial
         
         spatial_str = f", Spatial: {avg_spatial:.4f}" if avg_spatial > 0 else ""
@@ -163,7 +160,7 @@ class JägerBombTrainer:
 
     def _save_model(self, epoch, is_best=False):
         """Save model checkpoint."""
-        save_dir = Path(self.metrics.save_dir) / "weights"
+        save_dir = Path(self.metric_tracker.save_dir) / "weights"
         save_dir.mkdir(parents=True, exist_ok=True)
         
         last_path = save_dir / "last.pt"
@@ -182,7 +179,7 @@ class JägerBombTrainer:
 
 
     def train(self):
-        self.torch_model.to(self.cfg.device)
+        self.torch_model.to(self.device)
         best_loss = np.inf
         count = 0
         early_stoppage_count = 9999999999
@@ -195,7 +192,7 @@ class JägerBombTrainer:
         epoch_train_losses = self._reset_train_losses()
         
         for epoch in range(self.cfg.epochs):
-            self.state.model.train(True)
+            self.torch_model.train(True)
             
             epoch_train_losses = self._reset_train_losses()
             batch_count = 0
@@ -209,25 +206,23 @@ class JägerBombTrainer:
                 if ni <= nr_warmup_iterations:
                     xi = [0, nr_warmup_iterations]  # warmup iteration range
                     # Warmup: gradually increase LR from 0.1 to target
-                    for j, x in enumerate(self.cfg.optimizer.param_groups):
+                    for j, x in enumerate(self.state.optimizer.param_groups):
                         x['lr'] = np.interp(ni, xi, [0.1 * x['initial_lr'], x['initial_lr']])
                 
-                X, y = X.to(self.cfg.device), y.to(self.cfg.device) 
+                X, y = X.to(self.device), y.to(self.device) 
                 batch = self._prepare_batch_dict(X, y)
                 
                 # Save first training batch for visualization (only at epoch 0)
                 if batch_idx == 0 and epoch == 0 and not first_batch_saved:
-                    self.visualizer.visualize_batch(X, batch, predictions=None, 
+                    visualize_batch(X, batch,self.metric_tracker.save_dir ,predictions=None, 
                                         epoch=epoch, is_train=True, max_imgs=4)
                     first_batch_saved = True
-                
                 # Forward pass with AMP
-                with torch.amp.autocast(device_type=self.cfg.device, enabled=self.scaler.is_enabled()):
+                with torch.amp.autocast(device_type=self.device, enabled=self.scaler.is_enabled()):
                     pred = self.torch_model.forward(X)
                     batch_loss, last_loss = self.state.loss_fn(pred, batch)
                 
                 loss_values = last_loss.detach().cpu().numpy().round(3)
-                
                 # Handle both standard loss (3 elements) and spatial loss (4 elements)
                 if len(loss_values) == 4:
                     box_loss, cls_loss, dfl_loss, spatial_loss = loss_values
@@ -236,7 +231,6 @@ class JägerBombTrainer:
                     box_loss, cls_loss, dfl_loss = loss_values
                 
                 loss = batch_loss.sum()
-                
                 # Accumulate epoch losses
                 epoch_train_losses['box'] += box_loss
                 epoch_train_losses['cls'] += cls_loss
@@ -246,7 +240,6 @@ class JägerBombTrainer:
                 # Backward pass with gradient scaling
                 self.state.optimizer.zero_grad()
                 self.scaler.scale(loss).backward()
-                
                 # Gradient clipping (prevents exploding gradients)
                 self.scaler.unscale_(self.state.optimizer)
                 torch.nn.utils.clip_grad_norm_(self.torch_model.parameters(), max_norm=10.0)
@@ -254,7 +247,6 @@ class JägerBombTrainer:
                 # Optimizer step with scaler
                 self.scaler.step(self.state.optimizer)
                 self.scaler.update()
-                
 
                 if batch_idx % self.cfg.log_interval == 0:
                     click.echo(
@@ -263,7 +255,7 @@ class JägerBombTrainer:
                         f"Total: {(box_loss+cls_loss+dfl_loss):.4f}"
                     )
             
-            # Compute average training losses for the epoch
+            # FIX ME: THIS IS ONLY FOR LOGGING? 
             avg_train_losses = {
                 'box': epoch_train_losses['box'] / batch_count,
                 'cls': epoch_train_losses['cls'] / batch_count,
@@ -271,49 +263,41 @@ class JägerBombTrainer:
                 'spatial': epoch_train_losses['spatial'] / batch_count
             }
             
-            # Validation
             val_losses = self._validate(epoch)
-            
             # Compute detection metrics and generate plots every N epochs or at end
             generate_plots = (epoch == self.cfg.epochs - 1)
             
-            # Generate prediction visualizations every 10 epochs
+
             if generate_plots:
-                # Visualize validation predictions
-                self.visualizer.visualize_predictions(epoch, self.cfg.model, self.cfg.val_dataloader)
+                visualize_predictions(epoch, self.torch_model, self.state.val_loader, self.device)
             
-            try:
-                det_metrics = self.metrics.compute_metrics(plot=generate_plots)
+            det_metrics = self.metric_tracker.compute(plot=generate_plots)
                 
-                # Print metrics
-                click.echo(
+            click.echo(
                     f"METRICS — Epoch {epoch}: "
                     f"P: {det_metrics['precision']:.4f}, "
                     f"R: {det_metrics['recall']:.4f}, "
                     f"mAP50: {det_metrics['mAP50']:.4f}, "
                     f"mAP50-95: {det_metrics['mAP50-95']:.4f}"
                 )
-            except Exception as e:
-                det_metrics = {'precision': 0, 'recall': 0, 'mAP50': 0, 'mAP50-95': 0}
-                click.secho(f"Could not compute metrics: {e}", fg="red")
-            
-            # Step the learning rate scheduler (only after warmup)
+
             if epoch >= warmup_epochs:
-                self.cfg.scheduler.step()
+                self.state.scheduler.step()
             
-            current_lr = self.cfg.optimizer.param_groups[0]['lr']
+            current_lr = self.state.optimizer.param_groups[0]['lr']
             click.echo(f"Learning rate: {current_lr:.6f}")
             
-            # Log epoch to CSV
-            self.metrics.log_epoch(
+            # FIX ME: why do metrics have this?? 
+            self.metrics_logger.log_metrics(
+                batchResult=BatchResult(
+                    train_loss=LossComponent(**avg_train_losses),
+                    val_loss=LossComponent(**val_losses),
+                    metrics=det_metrics
+                ),
                 epoch=epoch,
-                train_losses=avg_train_losses,
-                val_losses=val_losses,
-                metrics=det_metrics,
                 lr=current_lr
-            )
+                )
             
-            # Model saving based on validation loss
             curr_val_loss = val_losses['total']
             if curr_val_loss < best_loss:
                 self._save_model(epoch, is_best=True)
@@ -327,9 +311,12 @@ class JägerBombTrainer:
                 click.secho(f"[INFO] Early stopping at epoch {epoch}", fg="blue")
                 break
         
-        # Finalize metrics (generate final plots)
         click.secho("\n[INFO] Generating final metrics and plots...", fg="blue")
-        self.metrics.finalize()
+        
+        plot_all_metrics(
+            confusion_matrix=self.metric_tracker.confusion_matrix,
+            base_dir=Path(self.metric_tracker.save_dir)
+        )
         
         # Evaluate best model on test set
         # click.secho("\n[INFO] Evaluating best model on test set...", fg="blue")

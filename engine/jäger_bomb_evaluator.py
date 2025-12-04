@@ -6,9 +6,9 @@ from pathlib import Path
 import click
 import torch
 
-from jäger_bomb_metrics import JägerBombMetrics
+from jäger_bomb_metrics_old import JägerBombMetrics
 from ultralytics.models.yolo.model import YOLO
-from utils import convert_to_python_types
+from utils.utils import convert_to_python_types
 
 
 class JägerBombEvaluator:
