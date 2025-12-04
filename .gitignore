@@ -1,3 +1,6 @@
-#ignore experiments folder
 experiments/
 runs/
+__pycache__/
+.ipynb_checkpoints/
+**/__pycache__/
+experiments_results/
