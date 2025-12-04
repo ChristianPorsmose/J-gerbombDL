@@ -28,6 +28,7 @@ def main(config):
 
     trainer = JägerBombTrainer(trainerCfg, trainerState)
     trainer.train()
+    trainer.test_best_model()
 
 if __name__ == "__main__":
     main()

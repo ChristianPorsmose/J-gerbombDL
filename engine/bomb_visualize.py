@@ -44,56 +44,22 @@ def visualize_batch(images, batch_dict,save_dir, predictions=None, epoch=0, is_t
         # Convert image tensor to numpy for visualization
         img = images[idx].cpu().permute(1, 2, 0).numpy()
         img = (img * 255).astype(np.uint8)
+
         ax.imshow(img)
         ax.axis('off')
         
-        # Getting image dimensions
         h, w = img.shape[:2]
         
-        # Draw ground truth boxes first
         img_mask = batch_dict['batch_idx'] == idx
         if img_mask.any():
-            gt_classes = batch_dict['cls'][img_mask].cpu().numpy()
-            gt_bboxes = batch_dict['bboxes'][img_mask].cpu().numpy()  # normalized xywh
-            for cls, bbox in zip(gt_classes, gt_bboxes):
-                # Convert normalized xywh to pixel xyxy
-                x_center, y_center, width, height = bbox
-                x1 = (x_center - width/2) * w
-                y1 = (y_center - height/2) * h
-                box_w = width * w
-                box_h = height * h
-                cls = int(cls)
-                rect = Rectangle((x1, y1), box_w, box_h, 
-                               linewidth=2, edgecolor=colors[cls], 
-                               facecolor='none', linestyle='-',
-                               label=f'GT {labels[cls]}')
-                ax.add_patch(rect)
+            _draw_ground_truth_boxes(batch_dict, colors, labels, ax, h, w, img_mask)
         
         if predictions is not None:
             # Process predictions
-            pred_boxes = predictions[0][idx]
-            
-            if len(pred_boxes) > 0:
-                
-                # pred_boxes in format: [x1, y1, x2, y2, conf, cls], I.e. bounding boxes, confidence, and class
-                for pred in pred_boxes:
-                    if len(pred) < 6:
-                        continue
-                    x1, y1, x2, y2, conf, cls = pred[:6]
-                    cls = int(cls)
-                    
-                    if conf < CONFIDENCE_THRESHOLD: 
-                        continue
-                    
-                    rect = Rectangle((x1, y1), x2-x1, y2-y1,
-                                   linewidth=2, edgecolor=colors.get(cls, 'green'),
-                                   facecolor='none', linestyle='--',
-                                   label=f'Pred {labels.get(cls, "?")} {conf:.2f}')
-                    ax.add_patch(rect)
+            _draw_predictions(predictions, colors, labels, idx, ax)
         
         ax.set_title(f'Image {idx}', fontsize=10)
     
-    # Add legend
     handles, labels_list = axes[0].get_legend_handles_labels()
     if handles:
         # Remove duplicate labels
@@ -103,12 +69,48 @@ def visualize_batch(images, batch_dict,save_dir, predictions=None, epoch=0, is_t
     
     plt.tight_layout()
     
-    # Save figure
     save_path = save_dir / f"epoch{epoch:03d}_{split}_batch.png"
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
     plt.close()
     
     print(f"Saved {split} visualization → {save_path}")
+
+def _draw_predictions(predictions, colors, labels, idx, ax):
+    pred_boxes = predictions[0][idx]
+            
+    if len(pred_boxes) > 0:
+                # pred_boxes in format: [x1, y1, x2, y2, conf, cls], I.e. bounding boxes, confidence, and class
+        for pred in pred_boxes:
+            if len(pred) < 6:
+                continue
+            x1, y1, x2, y2, conf, cls = pred[:6]
+            cls = int(cls)
+                    
+            if conf < CONFIDENCE_THRESHOLD: 
+                continue
+                    
+            rect = Rectangle((x1, y1), x2-x1, y2-y1,
+                                   linewidth=2, edgecolor=colors.get(cls, 'green'),
+                                   facecolor='none', linestyle='--',
+                                   label=f'Pred {labels.get(cls, "?")} {conf:.2f}')
+            ax.add_patch(rect)
+
+def _draw_ground_truth_boxes(batch_dict, colors, labels, ax, h, w, img_mask):
+    gt_classes = batch_dict['cls'][img_mask].cpu().numpy()
+    gt_bboxes = batch_dict['bboxes'][img_mask].cpu().numpy()  # normalized xywh
+    for cls, bbox in zip(gt_classes, gt_bboxes):
+                # Convert normalized xywh to pixel xyxy
+        x_center, y_center, width, height = bbox
+        x1 = (x_center - width/2) * w
+        y1 = (y_center - height/2) * h
+        box_w = width * w
+        box_h = height * h
+        cls = int(cls)
+        rect = Rectangle((x1, y1), box_w, box_h, 
+                               linewidth=2, edgecolor=colors[cls], 
+                               facecolor='none', linestyle='-',
+                               label=f'GT {labels[cls]}')
+        ax.add_patch(rect)
     
     
 def visualize_predictions(self, epoch, model, data_loader, device):

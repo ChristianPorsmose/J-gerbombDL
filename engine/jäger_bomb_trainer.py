@@ -1,17 +1,18 @@
+from dataclasses import asdict
+import json
 import torch
 import numpy as np
 from pathlib import Path
 from torch import nn
-from utils.utils import xywh_to_xyxy
 from datetime import datetime
 import click
-import traceback
 from metrics.jäger_bomb_metric_tracker import JägerBombMetricTracker
 from metrics.jäger_bomb_metric_logger import JägerBombMetricLogger
 from metrics.metric_visualization import plot_all_metrics
 from engine.bomb_visualize import visualize_batch, visualize_predictions
 from engine.data import BatchResult, LossComponent, TrainerConfig, TrainerState
 from engine.log_helpers import log_loss
+from ultralytics.models.yolo.model import YOLO
 
 class JägerBombTrainer:
     def __init__(self, cfg: TrainerConfig, state : TrainerState):
@@ -40,9 +41,24 @@ class JägerBombTrainer:
         self.metrics_logger = JägerBombMetricLogger(
             file_path=save_dir / "metrics.csv"
         )
+
+    def test_best_model(self):
+        best_model_path = self.metric_tracker.save_dir / "weights" / "best.pt"
+        if not best_model_path.exists():
+            click.secho(f"[WARNING] best.pt not found at {best_model_path}, skipping test evaluation", fg="yellow")
+            return
+        click.echo(f"[INFO] Loading best model from {best_model_path}...", fg="blue")
+        test_model = YOLO(str(best_model_path))
+        test_model.model.eval()
+        test_model.model.to(self.device)
+
+        loss = self._evaluate(None,self.state.test_loader, "TEST RESULTS")
+        results_path = self.metric_tracker.save_dir / "test_results.json"
+        with open(results_path, 'w') as f:
+            json.dump(asdict(loss), f, indent=2)
     
     @torch.no_grad()
-    def _validate(self, epoch) -> LossComponent:
+    def _evaluate(self, epoch, loader, header : str = "VALIDATION") -> LossComponent:
         """Validate model and compute metrics."""
         self.torch_model.eval()
         
@@ -51,7 +67,7 @@ class JägerBombTrainer:
 
         self.metric_tracker.reset()
         
-        for X_val, y_val in self.state.val_loader:
+        for X_val, y_val in loader:
             X_val, y_val = X_val.to(self.device), y_val.to(self.device)
             
             batch = self._prepare_batch_dict(X_val, y_val)
@@ -75,29 +91,9 @@ class JägerBombTrainer:
         
         average_loss = val_loss / count
         
-        log_loss(epoch, average_loss, header="VALIDATION")
+        log_loss(epoch, average_loss, header)
         
         return average_loss
-
-
-
-    def _prepare_batch_dict(self, images: torch.Tensor, targets: torch.Tensor) -> dict:
-        valid_mask = targets[:, :, 0] != -1
-
-        samples_with_valid_targets = valid_mask.any(dim=1)
-
-        if not samples_with_valid_targets.any():
-            return {"img": images, "batch_idx": torch.empty(0, device=images.device), "cls": torch.empty(0, device=images.device), "bboxes": torch.empty((0, 4), device=images.device)}
-
-        valid_targets = targets[valid_mask]
-
-        target_lengths = [int(v.sum().item()) for v in valid_mask]
-        batch_idx = torch.cat([torch.full((length,), i, device=images.device) for i, length in enumerate(target_lengths) if length > 0])
-
-        cls = valid_targets[:, 0]
-        bboxes = valid_targets[:, 1:]
-
-        return {"img": images, "batch_idx": batch_idx, "cls": cls, "bboxes": bboxes}
 
     def _save_model(self, epoch, is_best=False):
         """Save model checkpoint."""
@@ -140,7 +136,7 @@ class JägerBombTrainer:
             
             average_train_loss = epoch_train_losses / batch_count
             
-            val_losses = self._validate(epoch)
+            val_losses = self._evaluate(epoch, self.state.val_loader)
             # Compute detection metrics and generate plots every N epochs or at end
             generate_plots = (epoch == self.cfg.epochs - 1)
             
@@ -244,6 +240,18 @@ class JägerBombTrainer:
             if batch_idx % self.cfg.log_interval == 0:
                 log_loss(epoch, new_loss, header=f"TRAIN — Batch {batch_idx} ")
         return batch_count
+    
+    def _prepare_batch_dict(self, images: torch.Tensor, targets: torch.Tensor) -> dict:
+        valid_mask = targets[:, :, 0] != -1
+        samples_with_valid_targets = valid_mask.any(dim=1)
+        if not samples_with_valid_targets.any():
+            return {"img": images, "batch_idx": torch.empty(0, device=images.device), "cls": torch.empty(0, device=images.device), "bboxes": torch.empty((0, 4), device=images.device)}
+        valid_targets = targets[valid_mask]
+        target_lengths = [int(v.sum().item()) for v in valid_mask]
+        batch_idx = torch.cat([torch.full((length,), i, device=images.device) for i, length in enumerate(target_lengths) if length > 0])
+        cls = valid_targets[:, 0]
+        bboxes = valid_targets[:, 1:]
+        return {"img": images, "batch_idx": batch_idx, "cls": cls, "bboxes": bboxes}
 
     def _extract_loss_component(self, loss_values) -> LossComponent:
         return LossComponent(
@@ -251,4 +259,4 @@ class JägerBombTrainer:
             cls=loss_values[1],
             dfl=loss_values[2],
             spatial=loss_values[3] if len(loss_values) > 3 else 0.0
-        )
+    )
