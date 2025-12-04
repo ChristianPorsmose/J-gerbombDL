@@ -1,7 +1,5 @@
-from dataclasses import fields, is_dataclass
-import numpy as np
-from pathlib import Path
 import torch
+from contextlib import contextmanager
 
 import yaml
 
@@ -17,7 +15,6 @@ from configs import (
 import random
 import tempfile
 import os
-from utils.echo import log, log_info
 
 def load_config(path: str) -> ExperimentConfig:
     with open(path, "r") as f:
@@ -53,38 +50,34 @@ def xywh_to_xyxy(bboxes: torch.Tensor, img_w: int, img_h: int) -> torch.Tensor:
     
     return torch.stack([x1, y1, x2, y2], dim=1)
 
-def create_experiment_train_path(params, train_data_path):
-    with open(train_data_path, 'r') as f:
+@contextmanager
+def create_experiment_train_path(cfg : ExperimentConfig):
+    with open(cfg.paths.train, 'r') as f:
         all_train_paths = [line.strip() for line in f.readlines()]
         
-    desired_size = int(params["dataset_size"]*len(all_train_paths))
-        
+    desired_size = int(cfg.dataset_size*len(all_train_paths))
+    temp_file_path = None
+
     if desired_size < len(all_train_paths):
-        # Create NESTED subset: shuffle once with fixed seed, then take first N
-        # This ensures dataset_size=20 ⊂ dataset_size=40 ⊂ dataset_size=60, etc.
-        random.seed(42)  # Fixed seed for reproducibility across all experiments
+        random.seed(42)
         all_train_paths_shuffled = all_train_paths.copy()
         random.shuffle(all_train_paths_shuffled)
-            
-        # Take first N paths (ensures nesting property)
         sampled_paths = all_train_paths_shuffled[:desired_size]
-            
-        # Create temporary file in the SAME DIRECTORY as original file
-        # This is critical because the dataset prepends "../" and looks for labels/ relative to the file location
-        orig_dir = os.path.dirname(train_data_path)
+
+        orig_dir = os.path.dirname(cfg.paths.train)
         temp_file = tempfile.NamedTemporaryFile(
-                mode='w', 
-                delete=False, 
-                suffix='.txt',
-                dir=orig_dir  # Create temp file in same directory as original
-            )
+            mode='w', delete=False, suffix='.txt', dir=orig_dir
+        )
         for path in sampled_paths:
             temp_file.write(path + '\n')
         temp_file.close()
-        train_data_path = temp_file.name
-            
-        log_info(f"Dataset size limiting: Using {desired_size}/{len(all_train_paths)} training images (NESTED subset)")
-        log_info(f"Temporary file created: {train_data_path}")
+        temp_file_path = temp_file.name
+        train_data_path_to_use = temp_file_path
     else:
-        log_info(f"Dataset size: Using all {len(all_train_paths)} training images")
-    return train_data_path
+        train_data_path_to_use = cfg.paths.train
+
+    try:
+        yield train_data_path_to_use
+    finally:
+        if temp_file_path and os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
