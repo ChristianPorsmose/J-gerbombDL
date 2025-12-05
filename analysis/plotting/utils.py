@@ -17,82 +17,6 @@ def save_plot(path : Path, dpi: int = 300):
     plt.close()
     log_success(f"Saved: {save_path}")
 
-def plot_epoch(df : dict, val_total : float, label : str, color, alpha : int = 0.8, linewidth : float = 2.5):
-    plt.plot(
-        df["epoch"],
-        val_total,
-        label=label,
-        linewidth=linewidth,
-        color=color,
-        alpha = alpha
-    )
-
-def add_bars(ax, x, width, data_series, series_labels):
-    colors = ["#e74c3c", "#3498db", "#2ecc71", "#9b59b6"]
-
-    num_series = len(data_series)
-    bars = []
-    
-    group_span = num_series * width
-    
-    initial_offset = (group_span / 2) - (width / 2) 
-    
-    for i in range(num_series):
-        bar_center_position = x - initial_offset + (i * width)
-        bar_container = ax.bar(
-            bar_center_position,
-            data_series[i],  
-            width,
-            label=series_labels[i],
-            color=colors[i % len(colors)], 
-            edgecolor="black",
-            linewidth=1.5,
-        )
-        bars.append(bar_container)
-    return bars
-
-def add_bar_labels(ax: Axes, bar_containers: List, format_str: str, offset: float, threshold: float = None, size: int = 8):
-    for bar_container in bar_containers:
-        for bar in bar_container:
-            height = bar.get_height()
-    
-            is_valid = not np.isnan(height)
-            if threshold is not None:
-                is_valid = is_valid and (height >= threshold)
-            
-            if is_valid:
-                ax.text(
-                    bar.get_x() + bar.get_width() / 2.0,
-                    height + offset,
-                    format_str.format(height),
-                    ha="center",
-                    va="bottom",
-                    fontsize=size,
-                    fontweight="bold",
-                )
-
-
-def add_styling_bars(ax : Axes, ylabel : str,  title : str,labels,x = None
-                    ):
-    ax.set_ylabel(ylabel, fontsize=13, fontweight="bold")
-    ax.set_title(
-        title, fontsize=15, fontweight="bold"
-    )
-    if x:
-        ax.set_xticks(x)
-        ax.set_xticklabels(labels, rotation=15, ha="right")
-    ax.legend(fontsize=11, loc="upper right")
-    ax.grid(axis="y", alpha=0.3)
-
-def add_styling_epoch(ax : Axes, ylabel : str,  title : str, color:str = "black", epoch_size:int=11, title_size :int = 9 ):
-    ax.set_xlabel("Epoch", fontsize=epoch_size, fontweight="bold")
-    ax.set_ylabel(ylabel, fontsize=11, fontweight="bold")
-    ax.set_title(
-        title, fontsize=title_size, fontweight="bold", color=color
-    )
-    ax.legend(fontsize=11, loc="upper right")
-    ax.grid(True, alpha=0.3)
-
 def set_percentile_ylim(ax, values, pmin=5, pmax=95, floor=0, scale=1.1):
     clean = [v for v in values if np.isfinite(v)]
     if not clean:
@@ -114,6 +38,113 @@ def make_grid(n, max_cols=3, base_width=6, base_height=5):
         axes = [axes]
     return fig, axes
 
+
 def hide_unused_axes(axes, used):
     for ax in axes[used:]:
         ax.set_visible(False)
+
+
+def plot_line(ax,df,param,label, y, title, color, marker="o"):
+    ax.plot(
+        df[param],
+        df[y],
+        marker + "-",
+        linewidth=2.5,
+        markersize=8,
+        color=color,
+        label=y,
+    )
+    ax.set_xlabel(label, fontsize=11, fontweight="bold")
+    ax.set_title(f"{title} vs {label}", fontsize=12, fontweight="bold")
+    ax.grid(True, alpha=0.3)
+
+
+def normalize_column(df, col, out_col):
+    unique_vals = sorted(df[col].unique())
+    if len(unique_vals) > 1:
+        mapping = {v: i / (len(unique_vals) - 1) for i, v in enumerate(unique_vals)}
+        df[out_col] = df[col].map(mapping)
+    else:
+        df[out_col] = 0.5
+
+
+def pretty_label(name: str) -> str:
+    if name == "val_map50_95_norm":
+        return "Val mAP@0.5:0.95"
+    base = name.replace("_norm", "").replace("_", " ").title()
+    return {"Pretrained Flag": "Model Variant"}.get(base, base)
+
+
+def compute_best_by_variant(df):
+    result = {}
+    if "pretrained_flag" not in df.columns:
+        return result
+    for variant in sorted(df["pretrained_flag"].unique()):
+        sub = df[df["pretrained_flag"] == variant]
+        if len(sub) == 0:
+            continue
+        idx = sub["val_map50_95"].idxmax()
+        try:
+            result[int(idx)] = int(variant)
+        except Exception:
+            result[idx] = int(variant)
+    return result
+
+
+def draw_glow_highlight(ax, x_positions, values, color, marker, label=None, z=3):
+    for w in [6, 4, 2]:
+        ax.plot(x_positions, values, color=color, alpha=0.18, linewidth=w, zorder=1)
+    ax.plot(
+        x_positions,
+        values,
+        color=color,
+        linewidth=2.8,
+        marker=marker,
+        markersize=6,
+        linestyle="-",
+        markerfacecolor=color,
+        markeredgecolor="white",
+        label=label,
+        zorder=z,
+    )
+
+
+def annotate_axis(ax, axis_x, orig_param, df, is_map=False):
+    unique_vals = sorted(df[orig_param].unique())
+    for j, val in enumerate(unique_vals):
+        pos = j / (len(unique_vals) - 1) if len(unique_vals) > 1 else 0.5
+
+        if is_map:
+            text = f"{val:.4f}"
+        else:
+            if orig_param == "pretrained_flag":
+                text = "Small" if int(val) == 0 else "Pretrained"
+            elif isinstance(val, (int, np.integer)):
+                text = f"{int(val)}"
+            elif isinstance(val, float):
+                text = f"{val:.4f}"
+            else:
+                text = str(val)
+
+        ax.text(
+            axis_x + 0.15,
+            pos,
+            text,
+            fontsize=8,
+            va="center",
+            ha="left",
+            color="black",
+            bbox=dict(
+                boxstyle="round,pad=0.3",
+                facecolor="white",
+                alpha=0.7,
+                edgecolor="gray",
+            ),
+        )
+
+
+def normalize_map_values(df):
+    non_zero = df[df["val_map50_95"] > 0]["val_map50_95"]
+    m_min = non_zero.min() if len(non_zero) else df["val_map50_95"].min()
+    m_max = df["val_map50_95"].max()
+    return m_min, m_max
