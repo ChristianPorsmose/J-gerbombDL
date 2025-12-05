@@ -120,7 +120,6 @@ def run_experiment_from_config(
 
         subprocess.run(
             ["python", "main.py", "--config", str(temp_config_path)],
-            cwd="/Users/chrodn/Uni/Semester_1/Deep_Learning/mini_project",
             check=True,
             capture_output=False,  # Show output in real-time
             text=True,
