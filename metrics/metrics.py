@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+
 @dataclass
 class Metrics:
     precision: float = 0.0

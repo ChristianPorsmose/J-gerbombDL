@@ -1,11 +1,11 @@
 import torch
 from engine.jäger_bomb_trainer import JägerBombTrainer
-from torchvision.transforms import v2 as T
 import click
 from utils.utils import load_config, create_experiment_train_path
 from factory.training_factory import TrainingFactory
 from utils.experiment_log import log_config_params
 from freezer.freezer import Freezer
+
 
 @click.command()
 @click.option("--config", default="main.yaml", help="Path to YAML config file")
@@ -25,15 +25,15 @@ def main(config):
 
         freezer = Freezer(torch_model)
         params = freezer.freeze_backbone_layers(experiment_cfg.freeze.backbone_layers)
-
-        trainerCfg, trainerState = factory.create(model, params)
-        
         if experiment_cfg.freeze.dfl:
             freezer.freeze_dfl_conv_weights()
+
+        trainerCfg, trainerState = factory.create(model, params)
 
         trainer = JägerBombTrainer(trainerCfg, trainerState)
         trainer.train()
         trainer.test_best_model()
+
 
 if __name__ == "__main__":
     main()

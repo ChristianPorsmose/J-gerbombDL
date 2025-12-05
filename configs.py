@@ -1,20 +1,25 @@
 from dataclasses import dataclass
 from typing import Optional
+
+
 @dataclass
 class ModelConfig:
     type: str
     pretrained: bool
+
 
 @dataclass
 class LossConfig:
     type: str
     lambda_rate: Optional[float] = None
 
+
 @dataclass
 class PathsConfig:
     train: str
     val: str
     test: str
+
 
 @dataclass
 class TrainingConfig:
@@ -24,6 +29,7 @@ class TrainingConfig:
     save_interval: int
     save_path: str
 
+
 @dataclass
 class OptimizerConfig:
     type: str
@@ -32,10 +38,12 @@ class OptimizerConfig:
     weight_decay: float
     momentum: float
 
+
 @dataclass
 class FreezeConfig:
     backbone_layers: int
     dfl: bool
+
 
 @dataclass
 class ExperimentConfig:

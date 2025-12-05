@@ -27,7 +27,7 @@ freeze:
   backbone_layers: int
   dfl: bool
 
-augmentation: enum [none, light, heavy]
+augmentation: enum [none, light, full, final, geometric]
 dataset_size: int ( % of dataset)
 
 loss:

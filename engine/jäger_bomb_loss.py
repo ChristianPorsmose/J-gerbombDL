@@ -1,13 +1,12 @@
 import torch
-import torch.nn.functional as F
 from ultralytics.utils.loss import v8DetectionLoss
-from ultralytics.utils.tal import make_anchors
 
 SHOT_IDX = 0
 CUP_IDX = 1
 
+
 class JägerBombLoss(v8DetectionLoss):
-    def __init__(self, model : torch.nn.Module, tal_topk=10, lamda_rate=0.001): 
+    def __init__(self, model: torch.nn.Module, tal_topk=10, lamda_rate=0.001):
         super().__init__(model, tal_topk)
         self.lamda_rate = lamda_rate
 
@@ -17,12 +16,15 @@ class JägerBombLoss(v8DetectionLoss):
         """
         loss, detached_losses = super().__call__(preds, batch)
 
-        containment_loss = self._calculate_containment_loss_assigned(
-            self.pred_bboxes * self.stride_tensor,
-            self.target_bboxes * self.stride_tensor,
-            self.target_scores,
-            self.fg_mask
-        ) * self.lamda_rate
+        containment_loss = (
+            self._calculate_containment_loss_assigned(
+                self.pred_bboxes * self.stride_tensor,
+                self.target_bboxes * self.stride_tensor,
+                self.target_scores,
+                self.fg_mask,
+            )
+            * self.lamda_rate
+        )
 
         loss_vector = torch.zeros(4, device=self.device)
         loss_vector[:3] = loss
@@ -45,8 +47,10 @@ class JägerBombLoss(v8DetectionLoss):
         inter_h = (inter_y2 - inter_y1).clamp(min=0)
 
         return (inter_w * inter_h).squeeze()
-    
-    def _calculate_containment_loss_assigned(self, pred_bboxes, target_bboxes, target_scores, fg_mask):
+
+    def _calculate_containment_loss_assigned(
+        self, pred_bboxes, target_bboxes, target_scores, fg_mask
+    ):
         device = pred_bboxes.device
         total = torch.tensor(0.0, device=device)
 
@@ -66,11 +70,11 @@ class JägerBombLoss(v8DetectionLoss):
             pos_pred_boxes = pred_bboxes[b, pos]  # (M, 4)
 
             # Class scores at positives
-            pos_scores = target_scores[b, pos]     # (M, C)
+            pos_scores = target_scores[b, pos]  # (M, C)
             if pos_scores.numel() == 0:
                 continue
 
-            cls_ids = pos_scores.argmax(dim=1)     # (M,)
+            cls_ids = pos_scores.argmax(dim=1)  # (M,)
 
             shot_mask = cls_ids == SHOT_IDX
             cup_mask = cls_ids == CUP_IDX
@@ -88,14 +92,16 @@ class JägerBombLoss(v8DetectionLoss):
     def _nearest_loss(self, primary_boxes, candidate_boxes):
         if primary_boxes.shape[0] == 0 or candidate_boxes.shape[0] == 0:
             return torch.tensor(0.0, device=primary_boxes.device)
-        
+
         centers1 = (primary_boxes[:, :2] + primary_boxes[:, 2:]) / 2
         centers2 = (candidate_boxes[:, :2] + candidate_boxes[:, 2:]) / 2
         dists = torch.cdist(centers1, centers2, p=2)
 
         _, nearest_idx = dists.min(dim=1)
         nearest_boxes = candidate_boxes[nearest_idx]
-        
+
         inter = self._box_intersection(primary_boxes, nearest_boxes)
-        area = (primary_boxes[:, 2] - primary_boxes[:, 0]) * (primary_boxes[:, 3] - primary_boxes[:, 1])
+        area = (primary_boxes[:, 2] - primary_boxes[:, 0]) * (
+            primary_boxes[:, 3] - primary_boxes[:, 1]
+        )
         return (1.0 - (inter / (area + 1e-6))).clamp(min=0).mean()

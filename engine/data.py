@@ -6,13 +6,16 @@ import torch
 from ultralytics.models.yolo.model import YOLO
 from metrics.metrics import Metrics
 
+
 @dataclass
 class TrainerConfig:
     epochs: int
     log_interval: int
     experiment_name: str
 
+
 LossFunc: TypeAlias = Callable[..., Tuple[torch.Tensor, torch.Tensor]]
+
 
 @dataclass
 class TrainerState:
@@ -24,6 +27,7 @@ class TrainerState:
     val_loader: DataLoader
     test_loader: DataLoader
 
+
 @dataclass
 class LossComponent:
     box: float = 0.0
@@ -33,24 +37,24 @@ class LossComponent:
 
     def total(self) -> float:
         return self.box + self.cls + self.dfl + self.spatial
-    
-    def __truediv__(self, value: Union[int, float]) -> 'LossComponent':
+
+    def __truediv__(self, value: Union[int, float]) -> "LossComponent":
         return LossComponent(
             box=self.box / value,
             cls=self.cls / value,
             dfl=self.dfl / value,
-            spatial=self.spatial / value
+            spatial=self.spatial / value,
         )
 
-    def __add__(self, other: 'LossComponent') -> 'LossComponent':
+    def __add__(self, other: "LossComponent") -> "LossComponent":
         return LossComponent(
             box=self.box + other.box,
             cls=self.cls + other.cls,
             dfl=self.dfl + other.dfl,
-            spatial=self.spatial + other.spatial
+            spatial=self.spatial + other.spatial,
         )
-    
-    def __iadd__(self, other: 'LossComponent') -> 'LossComponent':
+
+    def __iadd__(self, other: "LossComponent") -> "LossComponent":
         self.box += other.box
         self.cls += other.cls
         self.dfl += other.dfl
