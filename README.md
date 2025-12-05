@@ -23,7 +23,6 @@ This contains the code that builds and analyse models to predict jägerbombglass
 pip install -r requirements.txt
 ```
 
-
 ## Running the Code
 
 ```
