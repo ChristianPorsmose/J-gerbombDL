@@ -151,7 +151,9 @@ class JägerBombTrainer:
         best_loss = np.inf
         early_stop_counter = 0
         early_stop_limit = (
-            float("inf") if self.cfg.early_stop_count == -1 else self.cfg.early_stop_count
+            float("inf")
+            if self.cfg.early_stop_count == -1
+            else self.cfg.early_stop_count
         )
 
         WARMUP_EPOCHS = 3.0
@@ -208,7 +210,9 @@ class JägerBombTrainer:
                 lr=current_lr,
             )
 
-            best_loss, early_stop_counter = self._save(best_loss, epoch, val_losses, early_stop_counter)
+            best_loss, early_stop_counter = self._save(
+                best_loss, epoch, val_losses, early_stop_counter
+            )
 
             if early_stop_counter >= early_stop_limit:
                 log_info(f"Early stopping at epoch {epoch}")
@@ -244,7 +248,6 @@ class JägerBombTrainer:
             early_stop_counter += 1
 
         return best_loss, early_stop_counter
-
 
     def train_one_epoch(
         self,
@@ -312,7 +315,9 @@ class JägerBombTrainer:
 
             if batch_idx % self.cfg.log_interval == 0:
                 log_loss(epoch, new_loss, header=f"TRAIN — Batch {batch_idx} ")
-                log_info(f"best_loss={best_loss:.4f}, early_stop_counter={early_stop_counter}")
+                log_info(
+                    f"best_loss={best_loss:.4f}, early_stop_counter={early_stop_counter}"
+                )
 
         return batch_count
 

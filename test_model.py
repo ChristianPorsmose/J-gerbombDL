@@ -2,6 +2,7 @@ from ultralytics.models import YOLO
 import os
 from pathlib import Path
 
+
 def test_image_simple(
     weights_path, image_path, conf_threshold=0.6, output_path="output.jpg"
 ):
@@ -41,7 +42,9 @@ def test_image_simple(
 
 
 if __name__ == "__main__":
-    BASE = Path("/home/dl01e25/MINI_PROJECT/experiments_results/early_stop_test/runs/train_20251205_142634/")
+    BASE = Path(
+        "/home/dl01e25/MINI_PROJECT/experiments_results/early_stop_test/runs/train_20251205_142634/"
+    )
     # Configuration
     WEIGHTS_PATH = BASE / "weights" / "best.pt"
     IMAGE_PATH = "dataset_final_boxes_yolo/images/Adrian_20251107_094907.jpg"
