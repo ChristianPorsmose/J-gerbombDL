@@ -1,62 +1,20 @@
 # Jägerbomb glass detector
 This contains the code that builds and analyse models to predict jägerbombglass
 
-## Code structure
+## folder structure
 ```
-├── analysis
-│   ├── __init__.py
-│   ├── phase_analysis.py
-│   ├── plot_train_val_compare_combined.py
-│   └── plotting.py
-├── configs.py
-├── dataset_final_boxes_yolo/*
-├── dataset
-│   ├── __init__.py
-│   ├── jäger_bomb_dataset.py
-│   ├── letter_box_transform.py
-│   └── yolo_compose.py
-├── engine
-│   ├── __init__.py
-│   ├── bomb_visualize.py
-│   ├── data.py
-│   ├── jäger_bomb_loss.py
-│   ├── jäger_bomb_trainer.py
-│   └── log_helpers.py
-├── experiments_scripts
-│   ├── __init__.py
-│   ├── experiment_configs.py
-│   └── run_grid_search.py
-├── factory
-│   ├── __init__.py
-│   └── training_factory.py
-├── freezer
-│   ├── __init__.py
-│   └── freezer.py
-├── main.py
-├── main.yaml
-├── metrics
-│   ├── __init__.py
-│   ├── jäger_bomb_metric_logger.py
-│   ├── jäger_bomb_metric_tracker.py
-│   ├── metric_visualization.py
-│   └── metrics.py
-├── models
-│   ├── Adrian.yaml
-│   ├── basic_detection.yaml
-│   └── custom_yolo.yaml
-├── ultralytics/*
-├── README.md
-├── requirements.txt
-├── template.yaml
-├── test_model.py
-├── utils
-│   ├── echo.py
-│   ├── experiment_log.py
-│   └── utils.py
-├── visualize_layers.ipynb
-└── yolo11n.pt
+| Folder                 | Description                                             |
+|------------------------|---------------------------------------------------------|
+| `analysis`             | Scripts for analyzing results and generating plots      |
+| `dataset`              | Dataset classes, preprocessing, and data transforms     |
+| `engine`               | Core training, evaluation, and loss function            |
+| `experiments_scripts`  | Scripts for running experiments and grid searches       |
+| `factory`              | Factory modules for setting up training configurations  |
+| `freezer`              | for freezing models or layers                           |
+| `metrics`              | Metric calculation, tracking, and visualization         |
+| `models`               | Model configuration files (YAML)                        |
+| `utils`                | Helper functions and utility scripts                    |
 ```
-
 
 
 ### Installation
