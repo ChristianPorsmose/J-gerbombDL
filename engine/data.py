@@ -7,19 +7,12 @@ from ultralytics.models.yolo.model import YOLO
 from metrics.metrics import Metrics
 
 
-@dataclass
-class TrainerConfig:
-    epochs: int
-    log_interval: int
-    experiment_name: str
-    early_stop_count: int
-
-
 LossFunc: TypeAlias = Callable[..., Tuple[torch.Tensor, torch.Tensor]]
 
 
 @dataclass
 class TrainerState:
+    experiment_name: str
     model: YOLO
     optimizer: optim.Optimizer
     scheduler: torch.optim.lr_scheduler.LambdaLR

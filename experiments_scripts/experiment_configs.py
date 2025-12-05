@@ -19,7 +19,6 @@ BASE = {
         "batch_size": 8,
         "epochs": 100,
         "log_interval": 10,
-        "save_interval": 30,
         "early_stop_count": -1,
     },
     "optimizer": {

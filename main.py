@@ -28,9 +28,9 @@ def main(config):
         if experiment_cfg.freeze.dfl:
             freezer.freeze_dfl_conv_weights()
 
-        trainerCfg, trainerState = factory.create(model, params)
+        trainerState = factory.create(model, params)
 
-        trainer = JägerBombTrainer(trainerCfg, trainerState)
+        trainer = JägerBombTrainer(experiment_cfg.training, trainerState)
         trainer.train()
         trainer.test_best_model()
 

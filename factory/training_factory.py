@@ -11,7 +11,7 @@ from torchvision.transforms import v2 as T
 from ultralytics.utils.loss import v8DetectionLoss
 from dataset.letter_box_transform import LetterBoxTransform
 from ultralytics.utils.loss import v8DetectionLoss
-from engine.data import LossFunc, TrainerConfig, TrainerState
+from engine.data import LossFunc, TrainerState
 from dataset.yolo_compose import YOLOCompose
 from types import SimpleNamespace
 from utils.echo import log_success, log_info, log
@@ -191,7 +191,7 @@ class TrainingFactory:
         log_info("Using standard YOLO loss (v8DetectionLoss)")
         return v8DetectionLoss(torch_model)
 
-    def create(self, model: YOLO, params: list) -> Tuple[TrainerConfig, TrainerState]:
+    def create(self, model: YOLO, params: list) -> TrainerState:
         torch_model = model.model
         train_transforms = self._create_transform_list(self.cfg.augmentation)
         val_transforms = self._create_transform_list("none")
@@ -203,14 +203,8 @@ class TrainingFactory:
         scheduler = self._create_scheduler(optimizer)
         loss_fn = self._create_loss_func(torch_model, self.cfg.loss_type)
 
-        trainer_cfg = TrainerConfig(
-            epochs=self.cfg.training.epochs,
-            log_interval=self.cfg.training.log_interval,
-            experiment_name=self.cfg.experiment_name,
-            early_stop_count=self.cfg.training.early_stop_count,
-        )
-
         trainer_state = TrainerState(
+            experiment_name=self.cfg.experiment_name,
             model=model,
             optimizer=optimizer,
             scheduler=scheduler,
@@ -220,4 +214,4 @@ class TrainingFactory:
             test_loader=test_dl,
         )
 
-        return trainer_cfg, trainer_state
+        return trainer_state

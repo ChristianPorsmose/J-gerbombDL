@@ -10,7 +10,8 @@ from metrics.jäger_bomb_metric_tracker import JägerBombMetricTracker
 from metrics.jäger_bomb_metric_logger import JägerBombMetricLogger
 from metrics.metric_visualization import plot_all_metrics
 from engine.bomb_visualize import visualize_batch, visualize_predictions
-from engine.data import BatchResult, LossComponent, TrainerConfig, TrainerState
+from engine.data import BatchResult, LossComponent, TrainerState
+from configs import TrainingConfig
 from engine.log_helpers import log_loss
 from ultralytics.models.yolo.model import YOLO
 from utils.echo import log_warning, log_info, log_success, log
@@ -19,7 +20,7 @@ from torch.utils.data import DataLoader
 
 
 class JägerBombTrainer:
-    def __init__(self, cfg: TrainerConfig, state: TrainerState):
+    def __init__(self, cfg: TrainingConfig, state: TrainerState):
         self.cfg = cfg
         self.torch_model: nn.Module = state.model.model
         self.state = state
@@ -33,7 +34,7 @@ class JägerBombTrainer:
 
     def _init_metrics(self):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        experiment_name = self.cfg.experiment_name
+        experiment_name = self.state.experiment_name
         save_dir = (
             Path("experiments_results")
             / experiment_name

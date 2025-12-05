@@ -26,7 +26,6 @@ class TrainingConfig:
     batch_size: int
     epochs: int
     log_interval: int
-    save_interval: int
     early_stop_count: int
 
 
