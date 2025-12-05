@@ -19,14 +19,6 @@ WHITE = (255, 255, 255)
 def visualize_batch(images, batch_dict,save_dir, predictions=None, epoch=0, is_train=True, max_imgs=4):
     """
     Visualize a batch with ground truth boxes and optionally predictions.
-    
-    Args:
-        images: Tensor [B, C, H, W]
-        batch_dict: Dict with 'batch_idx', 'cls', 'bboxes' (ground truth)
-        predictions: Optional model predictions
-        epoch: Current epoch number
-        is_train: Whether this is training or validation batch
-        max_imgs: Maximum number of images to visualize
     """
     save_dir = Path(save_dir) / "visualizations"
     save_dir.mkdir(parents=True, exist_ok=True)
@@ -128,7 +120,6 @@ def visualize_predictions(epoch, model, data_loader, save_dir : Path):
     log(f"Generating prediction visualizations for epoch {epoch}...")
     
     with torch.no_grad():
-        # validation loop
         for batch_idx, (X_val, y_val) in enumerate(data_loader):
             X_val = X_val.to(device)
             
@@ -161,14 +152,13 @@ def visualize_predictions(epoch, model, data_loader, save_dir : Path):
                             
                             _draw_label(colors_dict, labels, img, x1, y1, conf, cls)
                 
-                # Save image
                 save_path = save_dir / f"batch{batch_idx:03d}_img{img_idx:02d}.png"
                 cv2.imwrite(str(save_path), cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
             
             # Limit to first few batches to avoid too many images
-            if batch_idx >= 2:  # Visualize first 3 batches
+            if batch_idx >= 2: 
                 break
-    
+
     log(f"Saved prediction visualizations → {save_dir}")
 
 def _draw_box(colors_dict, img, x1, y1, x2, y2, cls):

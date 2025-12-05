@@ -14,9 +14,6 @@ class JägerBombLoss(v8DetectionLoss):
     def __call__(self, preds, batch):
         """
         Compute loss vector: [box, cls, dfl, containment].
-        Returns:
-            loss_vector: (4,) tensor, per-component loss
-            detached_losses: (4,) tensor, detached for logging
         """
         loss, detached_losses = super().__call__(preds, batch)
 
@@ -36,12 +33,6 @@ class JägerBombLoss(v8DetectionLoss):
         return loss_vector, detached_vector
 
     def _box_intersection(self, boxes1, boxes2):
-        """
-        Vectorized intersection calculation.
-        boxes1: (N, 4) xyxy
-        boxes2: (N, 4) xyxy
-        Returns: (N,) intersection area
-        """
         b1_x1, b1_y1, b1_x2, b1_y2 = boxes1.chunk(4, dim=1)
         b2_x1, b2_y1, b2_x2, b2_y2 = boxes2.chunk(4, dim=1)
 
@@ -56,11 +47,6 @@ class JägerBombLoss(v8DetectionLoss):
         return (inter_w * inter_h).squeeze()
     
     def _calculate_containment_loss_assigned(self, pred_bboxes, target_bboxes, target_scores, fg_mask):
-        """
-        Compute containment using assigned positives:
-        - Use fg_mask anchors
-        - Use target_scores to get class labels
-        """
         device = pred_bboxes.device
         total = torch.tensor(0.0, device=device)
 

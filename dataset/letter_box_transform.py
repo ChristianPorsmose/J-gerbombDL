@@ -12,14 +12,6 @@ class LetterBoxTransform:
     def __call__(self, img, bboxes=None):
         """
         Apply letterbox to image and optionally transform bboxes.
-        
-        Args:
-            img: tensor [C, H, W]
-            bboxes: optional tensor [N, 5] in YOLO format [class, x_center, y_center, width, height] (normalized 0-1)
-        
-        Returns:
-            img: letterboxed image
-            bboxes: transformed bboxes (if provided)
         """
         # img is a tensor [C, H, W]
         shape = img.shape[1:]  # current shape [H, W]
@@ -31,30 +23,26 @@ class LetterBoxTransform:
         
         # Compute padding
         new_unpad = int(round(shape[0] * r)), int(round(shape[1] * r))
-        dh, dw = new_shape[0] - new_unpad[0], new_shape[1] - new_unpad[1]  # wh padding
+        dh, dw = new_shape[0] - new_unpad[0], new_shape[1] - new_unpad[1]
         
-        dh /= 2  # divide padding into 2 sides
+        dh /= 2
         dw /= 2
         
         top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
         left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
         self.pad = (left, top, right, bottom)
         
-        if shape != new_unpad:  # resize
+        if shape != new_unpad:
             img = T.Resize(new_unpad)(img)
         
-        # Add padding
-        img = T.Pad([left, top, right, bottom], fill=self.color[0])(img)  # Use first color value for all channels
+        img = T.Pad([left, top, right, bottom], fill=self.color[0])(img)
         
-        # Transform bboxes if provided
         if bboxes is not None and len(bboxes) > 0:
             # Bboxes are in normalized format [class, x_center, y_center, width, height]
             # We need to maintain them in normalized format relative to the NEW padded image
-            
-            # Original image dimensions
+
             orig_h, orig_w = shape
             
-            # New dimensions after padding
             new_h, new_w = new_shape
             
             # Convert from normalized to pixel coordinates in original image
@@ -64,7 +52,6 @@ class LetterBoxTransform:
             bboxes_pixel[:, 3] *= orig_w  # width
             bboxes_pixel[:, 4] *= orig_h  # height
             
-            # Apply scaling
             bboxes_pixel[:, 1:5] *= r
             
             # Apply padding offset (only to centers)

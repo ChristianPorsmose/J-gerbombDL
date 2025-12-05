@@ -5,10 +5,9 @@ import os
 from torch import tensor
 import torch
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-empty_labels = torch.zeros((0, 5), dtype=torch.float32)
+from utils.echo import log_error, log_warning
 
-class JägerBombDataset(Dataset): # type: ignore
+class JägerBombDataset(Dataset):
     def __init__(
         self,
         images_list: str,
@@ -18,7 +17,8 @@ class JägerBombDataset(Dataset): # type: ignore
         labels_ext: str = "txt",
         transforms : list = None
         ):
-
+        self.device = torch.get_default_device().type
+        self.empty_labels = torch.zeros((0, 5), dtype=torch.float32)
         self.images_list = images_list
         self.images_list_ext = images_list_ext
         self.labels_ext = labels_ext
@@ -58,14 +58,13 @@ class JägerBombDataset(Dataset): # type: ignore
         image_path = self.image_files[index]
         image = decode_image(image_path)
         
-        #Check if label file exists
         label_path = self.__get_label_path_from_image_path(image_path)
 
         if not os.path.exists(label_path):
             # Negative sample (background image with no objects)
             if self.transforms:
-                image, _ = self.transforms(image, empty_labels)
-            return image.to(device), empty_labels.to(device)
+                image, _ = self.transforms(image, self.empty_labels)
+            return image.to(self.device), self.empty_labels.to(self.device)
         
         labels = []
         with open(label_path, 'r') as f:
@@ -73,31 +72,28 @@ class JägerBombDataset(Dataset): # type: ignore
                 try:
                     parts = line.strip().split()
                     if len(parts) != 5:
-                        print(f"Invalid label format in file: {label_path}")
+                        log_warning(f"Invalid label format in file: {label_path}")
                         self.mislabeled.append(image_path)
-                        return image.to(device), empty_labels.to(device)
+                        return image.to(self.device), self.empty_labels.to(self.device)
                     
                     class_label, x_center, y_center, width, height = map(float, parts)
 
                     if not (0 <= class_label <= 1 and 0 <= x_center <= 1 and 0 <= y_center <= 1 and 0 <= width <= 1 and 0 <= height <= 1):
-                        print(f"Det er altså ikke ordenlige labels her: {label_path}")
                         self.mislabeled.append(image_path)
                         continue
                     
                     labels.append([class_label, x_center, y_center, width, height])
                 except ValueError:
-                    print(f"Non-numeric value found in label file: {label_path}")
+                    log_error(f"Non-numeric value found in label file: {label_path}")
                     self.mislabeled.append(image_path)
                     continue
             
             if len(labels) == 0:
-                #print(f"No valid labels found for image: {image_path}\nAt path: {label_path}")
-                labels_tensor = empty_labels
+                labels_tensor = self.empty_labels
             else:
                 labels_tensor = tensor(labels)
             
-            # Apply transforms AFTER loading labels so we can transform both
             if self.transforms:
                 image, labels_tensor = self.transforms(image, labels_tensor)
 
-            return image.to(device), labels_tensor.to(device)
+            return image.to(self.device), labels_tensor.to(self.device)

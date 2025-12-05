@@ -1,214 +1,120 @@
-
-from torchvision.transforms import v2 as T
+import math
 import torch
+import numpy as np
+import cv2
+from torchvision.transforms import v2 as T
+import torchvision.transforms.functional as TF
 from dataset.letter_box_transform import LetterBoxTransform
 
-
 class YOLOCompose:
-    """Custom compose that handles both images and bboxes."""
+    """Custom Compose handling images and YOLO bounding boxes."""
+    
     def __init__(self, transforms):
         self.transforms = transforms
-    
+        self.handlers = {
+            LetterBoxTransform: self._handle_letterbox,
+            T.RandomHorizontalFlip: self._handle_hflip,
+            T.RandomVerticalFlip: self._handle_vflip,
+            T.RandomPerspective: self._handle_perspective,
+            T.RandomRotation: self._handle_rotation
+        }
+
     def __call__(self, img, bboxes=None):
         for t in self.transforms:
-            if isinstance(t, LetterBoxTransform):
-                if bboxes is not None and len(bboxes) > 0:
-                    img, bboxes = t(img, bboxes)
-                else:
-                    img = t(img)
-            elif isinstance(t, T.RandomHorizontalFlip) and bboxes is not None and len(bboxes) > 0:
-                # Apply horizontal flip to both image and bboxes
-                if torch.rand(1) < t.p:
-                    img = T.functional.hflip(img)
-                    # Flip bbox x-coordinates: x_center_new = 1 - x_center_old
-                    bboxes[:, 1] = 1.0 - bboxes[:, 1]  # flip x_center (column 1)
-            elif isinstance(t, T.RandomVerticalFlip) and bboxes is not None and len(bboxes) > 0:
-                # Apply vertical flip to both image and bboxes
-                if torch.rand(1) < t.p:
-                    img = T.functional.vflip(img)
-                    # Flip bbox y-coordinates: y_center_new = 1 - y_center_old
-                    bboxes[:, 2] = 1.0 - bboxes[:, 2]  # flip y_center (column 2)
-            elif isinstance(t, T.RandomPerspective) and bboxes is not None and len(bboxes) > 0:
-                # Apply perspective transform to both image and bboxes
-                img, bboxes = self._apply_perspective_with_bboxes(img, bboxes, t)
-            elif isinstance(t, T.RandomRotation) and bboxes is not None and len(bboxes) > 0:
-                # Apply rotation to both image and bboxes
-                img, bboxes = self._apply_rotation_with_bboxes(img, bboxes, t)
-            else:
-                # Regular transforms that only affect the image (color jitter, normalization, etc.)
-                img = t(img)
+            handler = self.handlers.get(type(t), self._handle_image_only)
+            img, bboxes = handler(t, img, bboxes)
         return img, bboxes
-    
-    def _apply_perspective_with_bboxes(self, img, bboxes, transform):
-        """Apply perspective transform to image and transform bboxes accordingly."""
-        import torchvision.transforms.functional as TF
-        
-        # Get image dimensions
-        _, h, w = img.shape
-        
-        # Get perspective parameters
-        if torch.rand(1) < transform.p:
-            startpoints, endpoints = transform.get_params(w, h, transform.distortion_scale)
-            
-            # Apply perspective to image
-            img = TF.perspective(img, startpoints, endpoints, transform.interpolation, transform.fill)
-            
-            # Convert normalized YOLO bboxes to pixel corners
-            bboxes_corners = self._yolo_to_corners(bboxes, w, h)  # [N, 4] with [x1, y1, x2, y2]
-            
-            # Get all 4 corners of each box
-            x1, y1, x2, y2 = bboxes_corners[:, 0], bboxes_corners[:, 1], bboxes_corners[:, 2], bboxes_corners[:, 3]
-            corners = torch.stack([
-                torch.stack([x1, y1], dim=1),  # top-left
-                torch.stack([x2, y1], dim=1),  # top-right
-                torch.stack([x1, y2], dim=1),  # bottom-left
-                torch.stack([x2, y2], dim=1),  # bottom-right
-            ], dim=1)  # [N, 4, 2]
-            
-            # Apply perspective transform to corners
-            device = bboxes.device
-            corners_transformed = self._transform_corners_perspective(corners, startpoints, endpoints, w, h)
-            corners_transformed = corners_transformed.to(device)  # Ensure same device as input
-            
-            # Get new bounding boxes from transformed corners (axis-aligned)
-            x_coords = corners_transformed[:, :, 0]  # [N, 4]
-            y_coords = corners_transformed[:, :, 1]  # [N, 4]
-            new_x1 = x_coords.min(dim=1)[0]
-            new_y1 = y_coords.min(dim=1)[0]
-            new_x2 = x_coords.max(dim=1)[0]
-            new_y2 = y_coords.max(dim=1)[0]
-            
-            # Convert back to normalized YOLO format
-            bboxes = self._corners_to_yolo(new_x1, new_y1, new_x2, new_y2, w, h, bboxes[:, 0])
-        
+
+    def _handle_letterbox(self, t, img, bboxes):
+        if bboxes is not None and len(bboxes) > 0:
+            return t(img, bboxes)
+        return t(img), bboxes
+
+    def _handle_hflip(self, t, img, bboxes):
+        if bboxes is not None and len(bboxes) > 0 and torch.rand(1) < t.p:
+            img = T.functional.hflip(img)
+            bboxes[:, 1] = 1.0 - bboxes[:, 1]
         return img, bboxes
-    
-    def _apply_rotation_with_bboxes(self, img, bboxes, transform):
-        """Apply rotation to image and transform bboxes accordingly."""
-        import torchvision.transforms.functional as TF
-        
-        # Get image dimensions
-        _, h, w = img.shape
-        
-        # Get rotation angle
-        angle = transform.get_params(transform.degrees)
-        
-        # Determine rotation center
-        if transform.center is None:
-            center = [w / 2, h / 2]
-        else:
-            center = transform.center
-        
-        # Apply rotation to image
-        img = TF.rotate(img, angle, transform.interpolation, transform.expand, center, transform.fill)
-        
-        # Convert normalized YOLO bboxes to pixel corners
-        bboxes_corners = self._yolo_to_corners(bboxes, w, h)
-        
-        # Get all 4 corners of each box
-        x1, y1, x2, y2 = bboxes_corners[:, 0], bboxes_corners[:, 1], bboxes_corners[:, 2], bboxes_corners[:, 3]
-        corners = torch.stack([
-            torch.stack([x1, y1], dim=1),  # top-left
-            torch.stack([x2, y1], dim=1),  # top-right
-            torch.stack([x1, y2], dim=1),  # bottom-left
-            torch.stack([x2, y2], dim=1),  # bottom-right
-        ], dim=1)  # [N, 4, 2]
-        
-        # Apply rotation to corners
-        device = bboxes.device
-        corners_transformed = self._transform_corners_rotation(corners, angle, center[0], center[1])
-        corners_transformed = corners_transformed.to(device)  # Ensure same device as input
-        
-        # Get new bounding boxes from transformed corners (axis-aligned)
-        x_coords = corners_transformed[:, :, 0]
-        y_coords = corners_transformed[:, :, 1]
-        new_x1 = x_coords.min(dim=1)[0]
-        new_y1 = y_coords.min(dim=1)[0]
-        new_x2 = x_coords.max(dim=1)[0]
-        new_y2 = y_coords.max(dim=1)[0]
-        
-        # Convert back to normalized YOLO format
-        bboxes = self._corners_to_yolo(new_x1, new_y1, new_x2, new_y2, w, h, bboxes[:, 0])
-        
+
+    def _handle_vflip(self, t, img, bboxes):
+        if bboxes is not None and len(bboxes) > 0 and torch.rand(1) < t.p:
+            if torch.rand(1) < t.p:
+                img = T.functional.vflip(img)
+                bboxes[:, 2] = 1.0 - bboxes[:, 2]
         return img, bboxes
-    
-    @staticmethod
-    def _yolo_to_corners(bboxes, img_w, img_h):
-        """Convert YOLO format [class, cx, cy, w, h] (normalized) to corners [x1, y1, x2, y2] (pixels)."""
-        cx = bboxes[:, 1] * img_w
-        cy = bboxes[:, 2] * img_h
-        w = bboxes[:, 3] * img_w
-        h = bboxes[:, 4] * img_h
-        
-        x1 = cx - w / 2
-        y1 = cy - h / 2
-        x2 = cx + w / 2
-        y2 = cy + h / 2
-        
+
+    def _handle_perspective(self, t, img, bboxes):
+        if bboxes is not None and len(bboxes) > 0 and torch.rand(1) < t.p:
+            _, h, w = img.shape
+            startpoints, endpoints = t.get_params(w, h, t.distortion_scale)
+            img = TF.perspective(img, startpoints, endpoints, t.interpolation, t.fill)
+            bboxes = self._transform_bboxes_perspective(bboxes, startpoints, endpoints, w, h)
+        return img, bboxes
+
+    def _handle_rotation(self, t, img, bboxes):
+        if bboxes is not None and len(bboxes) > 0:
+            _, h, w = img.shape
+            angle = t.get_params(t.degrees)
+            center = t.center if t.center is not None else [w/2, h/2]
+            img = TF.rotate(img, angle, t.interpolation, t.expand, center, t.fill)
+            bboxes = self._transform_bboxes_rotation(bboxes, angle, center[0], center[1], w, h)
+        return img, bboxes
+
+    def _handle_image_only(self, t, img, bboxes):
+        return t(img), bboxes
+
+    def _yolo_to_corners(self, bboxes, w, h):
+        cx, cy = bboxes[:, 1] * w, bboxes[:, 2] * h
+        bw, bh = bboxes[:, 3] * w, bboxes[:, 4] * h
+        x1, y1 = cx - bw/2, cy - bh/2
+        x2, y2 = cx + bw/2, cy + bh/2
         return torch.stack([x1, y1, x2, y2], dim=1)
-    
-    @staticmethod
-    def _corners_to_yolo(x1, y1, x2, y2, img_w, img_h, classes):
-        """Convert corners [x1, y1, x2, y2] (pixels) back to YOLO format [class, cx, cy, w, h] (normalized)."""
-        cx = ((x1 + x2) / 2) / img_w
-        cy = ((y1 + y2) / 2) / img_h
-        w = (x2 - x1) / img_w
-        h = (y2 - y1) / img_h
-        
-        # Clamp to valid range [0, 1]
-        cx = torch.clamp(cx, 0, 1)
-        cy = torch.clamp(cy, 0, 1)
-        w = torch.clamp(w, 0, 1)
-        h = torch.clamp(h, 0, 1)
-        
-        return torch.stack([classes, cx, cy, w, h], dim=1)
-    
-    @staticmethod
-    def _transform_corners_perspective(corners, startpoints, endpoints, w, h):
-        """Transform corners using perspective transformation matrix."""
-        # Compute perspective transformation matrix
-        import numpy as np
-        import cv2
-        
-        # Convert to numpy for cv2
-        startpoints_np = np.float32(startpoints)
-        endpoints_np = np.float32(endpoints)
-        matrix = cv2.getPerspectiveTransform(startpoints_np, endpoints_np)
-        
-        # Transform all corners
+
+    def _corners_to_yolo(self, x1, y1, x2, y2, w, h, classes):
+        cx = torch.clamp((x1 + x2) / 2 / w, 0, 1)
+        cy = torch.clamp((y1 + y2) / 2 / h, 0, 1)
+        bw = torch.clamp((x2 - x1) / w, 0, 1)
+        bh = torch.clamp((y2 - y1) / h, 0, 1)
+        return torch.stack([classes, cx, cy, bw, bh], dim=1)
+
+    def _transform_bboxes_perspective(self, bboxes, startpoints, endpoints, w, h):
+        corners = self._yolo_to_corners(bboxes, w, h)
         N = corners.shape[0]
-        corners_flat = corners.reshape(-1, 2).cpu().numpy()  # [N*4, 2]
-        
-        # Apply perspective transform
-        corners_homogeneous = np.hstack([corners_flat, np.ones((corners_flat.shape[0], 1))])  # [N*4, 3]
-        transformed = (matrix @ corners_homogeneous.T).T  # [N*4, 3]
-        transformed = transformed[:, :2] / transformed[:, 2:3]  # Normalize by w coordinate
-        
-        # Convert back to torch and reshape
-        corners_transformed = torch.from_numpy(transformed).float().reshape(N, 4, 2)
-        
-        return corners_transformed
-    
-    @staticmethod
-    def _transform_corners_rotation(corners, angle, cx, cy):
-        """Transform corners using rotation around specified center point."""
-        import math
-        
-        # Convert angle to radians (NOTE: torchvision uses counter-clockwise, which is standard)
-        angle_rad = math.radians(-angle)  # Negate because we need to match torchvision's convention
-        cos_a = math.cos(angle_rad)
-        sin_a = math.sin(angle_rad)
-        
-        # Translate corners to origin (center of rotation), rotate, translate back
+
+        x1, y1, x2, y2 = corners[:,0], corners[:,1], corners[:,2], corners[:,3]
+        corners_pts = torch.stack([
+            torch.stack([x1, y1], dim=1),
+            torch.stack([x2, y1], dim=1),
+            torch.stack([x1, y2], dim=1),
+            torch.stack([x2, y2], dim=1)
+        ], dim=1)
+
+        matrix = cv2.getPerspectiveTransform(np.float32(startpoints), np.float32(endpoints))
+        pts_flat = corners_pts.reshape(-1,2).cpu().numpy()
+        pts_h = np.hstack([pts_flat, np.ones((pts_flat.shape[0],1))])
+        transformed = (matrix @ pts_h.T).T
+        transformed = transformed[:,:2] / transformed[:,2:3]
+        transformed = torch.from_numpy(transformed).float().reshape(N,4,2)
+
+        x_coords, y_coords = transformed[:,:,0], transformed[:,:,1]
+        return self._corners_to_yolo(x_coords.min(1)[0], y_coords.min(1)[0],
+                                            x_coords.max(1)[0], y_coords.max(1)[0],
+                                            w, h, bboxes[:,0])
+
+    def _transform_bboxes_rotation(self, bboxes, angle, cx, cy, w, h):
+        corners = self._yolo_to_corners(bboxes, w, h)
+        angle_rad = math.radians(-angle)
+        cos_a, sin_a = math.cos(angle_rad), math.sin(angle_rad)
+
         corners_centered = corners.clone()
-        corners_centered[:, :, 0] -= cx
-        corners_centered[:, :, 1] -= cy
-        
-        # Apply rotation matrix
-        # Standard 2D rotation: [cos -sin; sin cos]
-        x_rot = corners_centered[:, :, 0] * cos_a - corners_centered[:, :, 1] * sin_a
-        y_rot = corners_centered[:, :, 0] * sin_a + corners_centered[:, :, 1] * cos_a
-        
-        corners_rotated = torch.stack([x_rot + cx, y_rot + cy], dim=2)
-        
-        return corners_rotated
+        corners_centered[:,:,0] -= cx
+        corners_centered[:,:,1] -= cy
+
+        x_rot = corners_centered[:,:,0] * cos_a - corners_centered[:,:,1] * sin_a
+        y_rot = corners_centered[:,:,0] * sin_a + corners_centered[:,:,1] * cos_a
+
+        rotated = torch.stack([x_rot+cx, y_rot+cy], dim=2)
+        x_coords, y_coords = rotated[:,:,0], rotated[:,:,1]
+        return self._corners_to_yolo(x_coords.min(1)[0], y_coords.min(1)[0],
+                                            x_coords.max(1)[0], y_coords.max(1)[0],
+                                            w, h, bboxes[:,0])

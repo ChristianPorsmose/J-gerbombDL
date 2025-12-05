@@ -27,12 +27,10 @@ class JägerBombTrainer:
         self._init_metrics()
 
     def _init_grad_scaler(self):
-        """Initialize gradient scaler for mixed precision training."""
         enable = self.device.startswith('cuda')
         self.scaler = GradScaler(self.device, enabled=enable)
     
     def _init_metrics(self):
-        """Initialize metrics tracking."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         experiment_name = self.cfg.experiment_name
         save_dir = Path("experiments_results") / experiment_name / "runs" / f"train_{timestamp}"
@@ -66,7 +64,7 @@ class JägerBombTrainer:
     
     @torch.no_grad()
     def _evaluate(self, epoch : int, loader : DataLoader, header : str = "VALIDATION") -> LossComponent:
-        """Validate model and compute metrics."""
+        """evaluate model and compute metrics."""
         self.torch_model.eval()
         
         val_loss = LossComponent()
@@ -232,7 +230,7 @@ class JägerBombTrainer:
             if nr_integrated_batches <= nr_warmup_iterations:
                 warmup_iteration_range = [0, nr_warmup_iterations] 
                 
-                # Warmup: gradually increase LR from 0.1 to target
+                # gradually increase LR from 0.1 to target
                 for j, x in enumerate(self.state.optimizer.param_groups):
                     x['lr'] = np.interp(nr_integrated_batches, warmup_iteration_range, [0.1 * x['initial_lr'], x['initial_lr']])
                 

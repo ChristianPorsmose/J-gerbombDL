@@ -6,7 +6,7 @@ from ultralytics.utils.metrics import ConfusionMatrix, DetMetrics, box_iou
 import torch 
 from ultralytics.utils.nms import non_max_suppression
 import numpy as np
-from utils.echo import log, log_warning, log_info, log_error
+from utils.echo import log_warning, log_info, log_error
 
 from utils.utils import xywh_to_xyxy
 
@@ -63,9 +63,6 @@ class JägerBombMetricTracker:
                        gt_bboxes: torch.Tensor, gt_cls: torch.Tensor) -> np.ndarray:
         """
         Compute true positives for predictions vs ground truth.
-        
-        Returns:
-            correct: Array of shape (num_preds, 10) for 10 IoU thresholds
         """
         # Move everything to CPU for processing
         pred_bboxes = pred_bboxes.cpu()
@@ -117,14 +114,7 @@ class JägerBombMetricTracker:
     def update(self, preds: torch.Tensor, targets: dict, conf_thres: float = 0.001, iou_thres: float = 0.6):
         """
         Update metrics with predictions and ground truth.
-        
-        Args:
-            preds: Model predictions (raw output from model)
-            targets: Dictionary with 'cls', 'bboxes', 'batch_idx' keys (bboxes in xyxy pixel format)
-            conf_thres: Confidence threshold for predictions
-            iou_thres: IoU threshold for NMS
         """
-        # Get raw predictions
         if isinstance(preds, (list, tuple)):
             preds = preds[0]
         
@@ -193,10 +183,6 @@ class JägerBombMetricTracker:
     def compute(self, plot: bool = True) -> Metrics:
         """
         Compute final metrics and optionally generate plots.
-        
-        Args:
-            plot: Whether to generate and save plots
-        
         """
         has_stats = any(len(v) > 0 for v in self.det_metrics.stats.values())
         
