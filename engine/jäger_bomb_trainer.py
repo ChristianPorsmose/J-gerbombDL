@@ -27,6 +27,7 @@ class JägerBombTrainer:
         self.device = torch.get_default_device().type
         self._init_grad_scaler()
         self._init_metrics()
+        self.first_batch_saved = False
 
     def _init_grad_scaler(self):
         enable = self.device.startswith("cuda")
@@ -168,15 +169,11 @@ class JägerBombTrainer:
             epoch_train_losses = LossComponent()
             batch_count = 0
 
-            # Track first batch for visualization
-            first_batch_saved = False
-
             batch_count += self.train_one_epoch(
                 train_loader_len,
                 nr_warmup_iterations,
                 epoch_train_losses,
                 epoch,
-                first_batch_saved,
             )
 
             average_train_loss = epoch_train_losses / batch_count
@@ -255,7 +252,6 @@ class JägerBombTrainer:
         nr_warmup_iterations: int,
         epoch_train_losses: LossComponent,
         epoch: int,
-        first_batch_saved: bool,
     ):
         batch_count = 0
         for batch_idx, (X, y) in enumerate(self.state.train_loader):
@@ -276,7 +272,7 @@ class JägerBombTrainer:
             X, y = X.to(self.device), y.to(self.device)
             batch = self._prepare_batch_dict(X, y)
 
-            if batch_idx == 0 and epoch == 0 and not first_batch_saved:
+            if batch_idx == 0 and epoch == 0 and not self.first_batch_saved:
                 visualize_batch(
                     X,
                     batch,
@@ -286,7 +282,7 @@ class JägerBombTrainer:
                     is_train=True,
                     max_imgs=4,
                 )
-                first_batch_saved = True
+                self.first_batch_saved = True
 
             with torch.amp.autocast(
                 device_type=self.device, enabled=self.scaler.is_enabled()
@@ -316,6 +312,7 @@ class JägerBombTrainer:
 
             if batch_idx % self.cfg.log_interval == 0:
                 log_loss(epoch, new_loss, header=f"TRAIN — Batch {batch_idx} ")
+                log_info(f"best_loss={best_loss:.4f}, early_stop_counter={early_stop_counter}")
 
         return batch_count
 
