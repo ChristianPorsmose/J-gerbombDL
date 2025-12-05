@@ -1,6 +1,6 @@
 from ultralytics.models import YOLO
 import os
-
+from pathlib import Path
 
 def test_image_simple(
     weights_path, image_path, conf_threshold=0.6, output_path="output.jpg"
@@ -41,11 +41,12 @@ def test_image_simple(
 
 
 if __name__ == "__main__":
+    BASE = Path("/home/dl01e25/MINI_PROJECT/experiments_results/early_stop_test/runs/train_20251205_142634/")
     # Configuration
-    WEIGHTS_PATH = "experiments_results/phase1a_adamw_standard/runs/train_20251204_183521/weights/best.pt"
+    WEIGHTS_PATH = BASE / "weights" / "best.pt"
     IMAGE_PATH = "dataset_final_boxes_yolo/images/Adrian_20251107_094907.jpg"
     CONFIDENCE_THRESHOLD = 0.6
-    OUTPUT_PATH = "detection_result.jpg"
+    OUTPUT_PATH = BASE / "detection_result.jpg"
 
     if not os.path.exists(WEIGHTS_PATH):
         print(f"Error: Weights file not found at {WEIGHTS_PATH}")

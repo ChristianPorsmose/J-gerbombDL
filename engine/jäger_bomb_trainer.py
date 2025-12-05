@@ -150,8 +150,9 @@ class JägerBombTrainer:
         best_loss = np.inf
         early_stop_counter = 0
         early_stop_limit = (
-            999999 if self.cfg.early_stop_count == -1 else self.cfg.early_stop_count
+            float("inf") if self.cfg.early_stop_count == -1 else self.cfg.early_stop_count
         )
+
         WARMUP_EPOCHS = 3.0
 
         train_loader_len = len(self.state.train_loader)
@@ -210,11 +211,12 @@ class JägerBombTrainer:
                 lr=current_lr,
             )
 
-            self._save(best_loss, epoch, val_losses, early_stop_counter)
+            best_loss, early_stop_counter = self._save(best_loss, epoch, val_losses, early_stop_counter)
 
             if early_stop_counter >= early_stop_limit:
                 log_info(f"Early stopping at epoch {epoch}")
                 break
+            
         training_end_time = time.time()
 
         self._save_training_time(training_start_time, training_end_time)
@@ -230,7 +232,7 @@ class JägerBombTrainer:
 
     def _save(
         self,
-        best_loss: int,
+        best_loss: float,
         epoch: int,
         val_losses: LossComponent,
         early_stop_counter: int,
@@ -243,6 +245,9 @@ class JägerBombTrainer:
         else:
             self._save_model(epoch, is_best=False)
             early_stop_counter += 1
+
+        return best_loss, early_stop_counter
+
 
     def train_one_epoch(
         self,
