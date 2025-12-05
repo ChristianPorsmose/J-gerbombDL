@@ -1,0 +1,16 @@
+{
+  "losses": {
+    "box": 0.2953999936580658,
+    "cls": 0.19839999079704285,
+    "dfl": 0.7999999523162842,
+    "spatial": 0.0,
+    "total": 1.2937999963760376
+  },
+  "metrics": {
+    "precision": 0.9995583669573469,
+    "recall": 1.0,
+    "mAP50": 0.995,
+    "mAP50-95": 0.9676722540848465
+  },
+  "model": "experiments/optimzer_config_small_lr0_0100_momentum0_9900_weight_decay0_1000/runs/train_20251204_002838/weights/best.pt"
+}

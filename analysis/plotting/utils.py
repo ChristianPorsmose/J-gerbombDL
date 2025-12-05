@@ -5,6 +5,7 @@ from typing import List
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 import numpy as np
+import pandas as pd
 
 from analysis.experiment_list import OUTPUT_DIR
 from utils.echo import log_success
@@ -148,3 +149,15 @@ def normalize_map_values(df):
     m_min = non_zero.min() if len(non_zero) else df["val_map50_95"].min()
     m_max = df["val_map50_95"].max()
     return m_min, m_max
+
+
+def normalize_metrics(df: pd.DataFrame, metrics: List[str]) -> pd.DataFrame:
+    """Normalize metrics to 0-1, inverting for 'lower is better'."""
+    df_norm = df.copy()
+    for metric in metrics:
+        vals = df_norm[metric].values.astype(float)
+        if metric == "val_map50_95":  # higher is better
+            df_norm[metric + "_norm"] = (vals - vals.min()) / (vals.max() - vals.min() + 1e-8)
+        else:  # lower is better
+            df_norm[metric + "_norm"] = 1 - (vals - vals.min()) / (vals.max() - vals.min() + 1e-8)
+    return df_norm

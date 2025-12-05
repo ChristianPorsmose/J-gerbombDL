@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from analysis.experiment_list import OUTPUT_DIR, PHASE_NAME
+from analysis.plotting.bar_plots import create_top_n_comparison_bar_plot
 from analysis.plotting.utils import annotate_axis, compute_best_by_variant, draw_glow_highlight, make_grid, normalize_column, normalize_map_values, plot_line, pretty_label, save_plot
 from analysis.utils import calculate_convergence_epoch, calculate_stability, extract_hyperparameters_from_name
 from utils.echo import log_success, log
@@ -63,7 +64,7 @@ def create_grid_search_plots(experiments_data: List[Dict]):
     plot_df, best_idx, best_mAP, best_by_variant = prepare_parallel_coordinates_data(df_grid, varying_params)
     plot_parallel_coordinates(plot_df, varying_params, best_idx, best_mAP, best_by_variant)
 
-    create_top_n_comparison(df_grid,n=min(10, len(df_grid)))
+    create_top_n_comparison_bar_plot(df_grid,n=min(10, len(df_grid)))
 
     if len(varying_params) >= 2:
         create_parameter_importance_plot(df_grid, varying_params)
@@ -88,7 +89,7 @@ def create_heatmap_plots(df_grid: pd.DataFrame, varying_params: List[str]):
                 continue
 
             fig, axes = plt.subplots(1, 3, figsize=(18, 5))
-            for ax, (metric, title, cmap, higher_better) in zip(axes, metrics_to_plot):
+            for ax, (metric, title, cmap ) in zip(axes, metrics_to_plot):
                 pivot = df_grid.pivot_table(values=metric, index=p2, columns=p1, aggfunc="mean")
                 im = ax.imshow(pivot.values, cmap=cmap, aspect="auto")
                 ax.set_xticks(range(len(pivot.columns)))
@@ -124,7 +125,7 @@ def create_parameter_sweep_plot(df_grid: pd.DataFrame, param: str):
     plot_line(ax,df_sorted,param,param_label, "val_map50_95", "Performance", "#3498db", "o")
     plot_line(ax,df_sorted,param,param_label, "val_map50", "Performance", "#2ecc71", "s")
     if "test_map50_95" in df_sorted.columns:
-        plot_line(ax, "test_map50_95", "Performance", "#e74c3c", "^")
+        plot_line(ax,df_sorted,param,param_label, "test_map50_95", "Performance", "#e74c3c", "^")
 
     ax.set_ylabel("mAP Score", fontsize=11, fontweight="bold")
     ax.legend(fontsize=9)
@@ -285,116 +286,6 @@ def create_parameter_importance_plot(df_grid: pd.DataFrame, varying_params: List
 
     save_plot("parameter_importance.png")
 
-def normalize_metrics(df: pd.DataFrame, metrics: List[str]) -> pd.DataFrame:
-    """Normalize metrics to 0-1, inverting for 'lower is better'."""
-    df_norm = df.copy()
-    for metric in metrics:
-        vals = df_norm[metric].values.astype(float)
-        if metric == "val_map50_95":  # higher is better
-            df_norm[metric + "_norm"] = (vals - vals.min()) / (vals.max() - vals.min() + 1e-8)
-        else:  # lower is better
-            df_norm[metric + "_norm"] = 1 - (vals - vals.min()) / (vals.max() - vals.min() + 1e-8)
-    return df_norm
-
-
-def plot_annotated_bars(ax, x, heights, labels, width=0.35, colors=None, xlabel=None, title=None):
-    """Create grouped bar plot with annotations."""
-    if colors is None:
-        colors = plt.cm.tab10.colors
-    bars = []
-    for i, (val, color) in enumerate(zip(heights, colors)):
-        bar = ax.bar(x[i], val, width, color=color, edgecolor="black")
-        ax.text(x[i], val + 1e-4, f"{val:.4f}", ha="center", va="bottom", fontsize=7, fontweight="bold")
-        bars.append(bar)
-    if xlabel:
-        ax.set_xlabel(xlabel, fontsize=12, fontweight="bold")
-    if title:
-        ax.set_title(title, fontsize=13, fontweight="bold")
-    return bars
-
-def style_axis(
-    ax,
-    xlabel: str = None,
-    ylabel: str = None,
-    title: str = None,
-    xticks: list = None,
-    xticklabels: list = None,
-    rotation: int = 0,
-    ylim: tuple = None,
-    grid: bool = True,
-    fontsize_label: int = 12,
-    fontsize_title: int = 13,
-    fontweight: str = "bold"
-):
-    """Apply common styling to a matplotlib axis."""
-    if xlabel:
-        ax.set_xlabel(xlabel, fontsize=fontsize_label, fontweight=fontweight)
-    if ylabel:
-        ax.set_ylabel(ylabel, fontsize=fontsize_label, fontweight=fontweight)
-    if title:
-        ax.set_title(title, fontsize=fontsize_title, fontweight=fontweight)
-    if xticks is not None:
-        ax.set_xticks(xticks)
-    if xticklabels is not None:
-        ax.set_xticklabels(xticklabels, rotation=rotation, ha="right", fontsize=fontsize_label)
-    if ylim:
-        ax.set_ylim(ylim)
-    if grid:
-        ax.grid(True, alpha=0.3, axis="y")
-
-
-
-def create_top_n_comparison(df_grid: pd.DataFrame, n: int = 10):
-    """Create comparison plot of top N configurations."""
-    
-    actual_n = min(n, len(df_grid))
-    df_top = df_grid.nlargest(actual_n, "val_map50_95")
-
-    if actual_n < n:
-        print(f"ℹ️ Top N comparison: Only {actual_n} valid experiments (requested {n})")
-
-    labels = [name[:40] + "..." if len(name) > 40 else name for name in df_top["label"]]
-    x = np.arange(actual_n)
-
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
-
-    # Plot 1: Val vs Test mAP
-    df_top["test_map50_95"] = df_top["test_map50_95"].replace([np.inf, -np.inf], np.nan).fillna(0)
-    val_heights = df_top["val_map50_95"].values
-    test_heights = df_top["test_map50_95"].values
-    width = 0.35
-
-    # Use helper for annotated bars
-    for i, (val, test_val) in enumerate(zip(val_heights, test_heights)):
-        plot_annotated_bars(ax1, [x[i]-width/2, x[i]+width/2], [val, test_val], ["Val", "Test"],
-                            width=width, colors=["#3498db", "#e74c3c"])
-
-    style_axis(ax1,
-               ylabel="mAP Score",
-               title=f"Top {actual_n} Configurations by Validation mAP",
-               xticks=x, xticklabels=labels, rotation=45, fontsize_label=8)
-    ax1.legend(["Val mAP@0.5:0.95", "Test mAP@0.5:0.95"], fontsize=10)
-
-    # Plot 2: Multi-metric normalized comparison
-    metrics = ["val_map50_95", "convergence_epoch", "stability"]
-    df_norm = normalize_metrics(df_top, metrics)
-
-    x_metric = np.arange(len(metrics))
-    width = 0.8 / actual_n
-    for i, label in enumerate(labels):
-        offset = (i - actual_n/2) * width
-        values = [df_norm[m + "_norm"].iloc[i] for m in metrics]
-        plot_annotated_bars(ax2, x_metric + offset, values, metrics, width=width, colors=[plt.cm.tab10(i % 10)]*len(metrics))
-
-    metric_labels = ["Val mAP\n(↑)", "Convergence\nEpoch (↓)", "Stability\nStd (↓)"]
-    style_axis(ax2,
-               ylabel="Normalized Score (0-1)",
-               title="Multi-Metric Comparison (Normalized)",
-               xticks=x_metric, xticklabels=metric_labels,
-               ylim=(0, 1.1))
-    ax2.legend(labels, fontsize=7, loc="upper left", bbox_to_anchor=(1, 1))
-
-    save_plot(f"top_{actual_n}_comparison.png")
 
 def style_row(table, col_labels, row_idx: int, facecolor: str, text_color: str = "black", bold: bool = True):
     for i in range(len(col_labels)):

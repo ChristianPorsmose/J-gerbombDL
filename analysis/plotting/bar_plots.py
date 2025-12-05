@@ -3,13 +3,14 @@ from typing import Dict, List
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 import numpy as np
+import pandas as pd
 
 from analysis.experiment_list import COLORS, PHASE_NAME
-from analysis.plotting.utils import save_plot
+from analysis.plotting.utils import normalize_metrics, save_plot
 from analysis.utils import calculate_convergence_epoch
 
 def _add_bars(ax, x, width, data_series, series_labels):
-    colors = ["#e74c3c", "#3498db", "#2ecc71", "#9b59b6"]
+    colors = plt.cm.tab10.colors
 
     num_series = len(data_series)
     bars = []
@@ -53,18 +54,16 @@ def _add_bar_labels(ax: Axes, bar_containers: List, format_str: str, offset: flo
                 )
 
 
-def _add_styling_bars(ax : Axes, ylabel : str,  title : str,labels,x = None
-                    ):
+def _add_styling_bars(ax : Axes, ylabel : str,  title : str,labels,x = None, rotation:int = 15):
     ax.set_ylabel(ylabel, fontsize=13, fontweight="bold")
     ax.set_title(
         title, fontsize=15, fontweight="bold"
     )
-    if x:
+    if x is not None:
         ax.set_xticks(x)
-        ax.set_xticklabels(labels, rotation=15, ha="right")
+        ax.set_xticklabels(labels, rotation=rotation, ha="right")
     ax.legend(fontsize=11, loc="upper right")
     ax.grid(axis="y", alpha=0.3)
-
 
 def plot_bar_groups(
     ax: Axes,
@@ -206,3 +205,64 @@ def plot_convergence_speed_bar_plot(experiments_data: List[Dict]):
         )
 
     save_plot("5_convergence_speed.png")
+
+
+def create_top_n_comparison_bar_plot(df_grid: pd.DataFrame, n: int = 10):
+    """Create comparison plot of top N configurations using _add_bars."""
+
+    actual_n = min(n, len(df_grid))
+    df_top = df_grid.nlargest(actual_n, "val_map50_95")
+
+    if actual_n < n:
+        print(f"Top N comparison: Only {actual_n} valid experiments (requested {n})")
+
+    labels = [name[:40] + "..." if len(name) > 40 else name for name in df_top["label"]]
+    x = np.arange(actual_n)
+
+    _, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+
+    df_top["test_map50_95"] = df_top["test_map50_95"].replace([np.inf, -np.inf], np.nan).fillna(0)
+    val_heights = df_top["val_map50_95"].values
+    test_heights = df_top["test_map50_95"].values
+
+    width = 0.35
+    data_series = [val_heights, test_heights]
+    series_labels = ["Val mAP@0.5:0.95", "Test mAP@0.5:0.95"]
+
+    bars = _add_bars(ax1, x, width, data_series, series_labels)
+    _add_bar_labels(ax1, bars, "{:.4f}", 0.002)
+
+    _add_styling_bars(
+        ax1,
+        "mAP Score",
+        f"Top {actual_n} Configurations by Validation mAP",
+        labels,
+        x,
+        rotation=45
+    )
+    ax1.legend(series_labels, fontsize=10)
+
+    metrics = ["val_map50_95", "convergence_epoch", "stability"]
+    df_norm = normalize_metrics(df_top, metrics)
+
+    x_metric = np.arange(len(metrics))
+    width = 0.8 / actual_n
+
+    data_series = []
+    for i in range(actual_n):
+        values = [df_norm[m + "_norm"].iloc[i] for m in metrics]
+        data_series.append(values)
+
+    bars = _add_bars(ax2, x_metric, width, data_series, labels)
+    _add_bar_labels(ax2, bars, "{:.3f}", 0.002)
+
+    metric_labels = ["Val mAP\n(↑)", "Convergence\nEpoch (↓)", "Stability\nStd (↓)"]
+    _add_styling_bars(
+        ax2,
+        "Normalized Score (0-1)",
+        "Multi-Metric Comparison (Normalized)",
+        metric_labels,
+        x_metric
+    )
+    ax2.legend(labels, fontsize=7, loc="upper left", bbox_to_anchor=(1, 1))
+    save_plot(f"top_{actual_n}_comparison.png")
