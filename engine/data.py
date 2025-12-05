@@ -12,6 +12,7 @@ class TrainerConfig:
     epochs: int
     log_interval: int
     experiment_name: str
+    early_stop_count: int
 
 
 LossFunc: TypeAlias = Callable[..., Tuple[torch.Tensor, torch.Tensor]]

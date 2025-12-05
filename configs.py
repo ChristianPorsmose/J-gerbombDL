@@ -27,7 +27,7 @@ class TrainingConfig:
     epochs: int
     log_interval: int
     save_interval: int
-    save_path: str
+    early_stop_count: int
 
 
 @dataclass

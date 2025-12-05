@@ -20,7 +20,7 @@ BASE = {
         "epochs": 100,
         "log_interval": 10,
         "save_interval": 30,
-        "save_path": "weights",
+        "early_stop_count": -1,
     },
     "optimizer": {
         "type": "AdamW",

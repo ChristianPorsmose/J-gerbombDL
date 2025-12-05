@@ -207,6 +207,7 @@ class TrainingFactory:
             epochs=self.cfg.training.epochs,
             log_interval=self.cfg.training.log_interval,
             experiment_name=self.cfg.experiment_name,
+            early_stop_count=self.cfg.training.early_stop_count,
         )
 
         trainer_state = TrainerState(

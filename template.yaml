@@ -14,7 +14,7 @@ training:
   epochs: int
   log_interval: int
   save_interval: int
-  save_path: str (directory)
+  early_stop_count: int (-1 for no early stopping)
 
 optimizer:
   type: enum [AdamW, SGD]

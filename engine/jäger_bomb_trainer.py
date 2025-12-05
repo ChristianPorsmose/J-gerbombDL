@@ -74,7 +74,6 @@ class JägerBombTrainer:
         self.torch_model.eval()
 
         val_loss = LossComponent()
-        count = 0
 
         self.metric_tracker.reset()
 
@@ -92,15 +91,13 @@ class JägerBombTrainer:
 
             val_loss += new_loss
 
-            count += 1
-
             img_h, img_w = X_val.shape[2], X_val.shape[3]
 
             metrics_batch = self.metric_tracker.prepare_batch(y_val, img_h, img_w)
 
             self.metric_tracker.update(pred_val, metrics_batch)
 
-        average_loss = val_loss / count
+        average_loss = val_loss / len(loader)
 
         log_loss(epoch, average_loss, header)
 
@@ -150,8 +147,10 @@ class JägerBombTrainer:
     def train(self):
         self.torch_model.to(self.device)
         best_loss = np.inf
-        count = 0
-        EARLY_STOPPAGE_COUNT = 9999999999
+        early_stop_counter = 0
+        early_stop_limit = (
+            999999 if self.cfg.early_stop_count == -1 else self.cfg.early_stop_count
+        )
         WARMUP_EPOCHS = 3.0
 
         train_loader_len = len(self.state.train_loader)
@@ -210,9 +209,9 @@ class JägerBombTrainer:
                 lr=current_lr,
             )
 
-            count = self._save(best_loss, epoch, val_losses)
+            self._save(best_loss, epoch, val_losses, early_stop_counter)
 
-            if count >= EARLY_STOPPAGE_COUNT:
+            if early_stop_counter >= early_stop_limit:
                 log_info(f"Early stopping at epoch {epoch}")
                 break
         training_end_time = time.time()
@@ -228,16 +227,21 @@ class JägerBombTrainer:
 
         log_success("Training complete!")
 
-    def _save(self, best_loss: int, epoch: int, val_losses: LossComponent) -> int:
+    def _save(
+        self,
+        best_loss: int,
+        epoch: int,
+        val_losses: LossComponent,
+        early_stop_counter: int,
+    ):
         curr_val_loss = val_losses.total()
         if curr_val_loss < best_loss:
             self._save_model(epoch, is_best=True)
             best_loss = curr_val_loss
-            count = 0
+            early_stop_counter = 0
         else:
             self._save_model(epoch, is_best=False)
-            count += 1
-        return count
+            early_stop_counter += 1
 
     def train_one_epoch(
         self,
