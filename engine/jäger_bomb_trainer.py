@@ -216,7 +216,7 @@ class JägerBombTrainer:
             if early_stop_counter >= early_stop_limit:
                 log_info(f"Early stopping at epoch {epoch}")
                 break
-            
+
         training_end_time = time.time()
 
         self._save_training_time(training_start_time, training_end_time)
@@ -291,7 +291,7 @@ class JägerBombTrainer:
             with torch.amp.autocast(
                 device_type=self.device, enabled=self.scaler.is_enabled()
             ):
-                pred = self.torch_model.forward(X)
+                pred = self.torch_model(X)
                 batch_loss, last_loss = self.state.loss_fn(pred, batch)
 
             loss_values = last_loss.detach().cpu().numpy().round(3)
