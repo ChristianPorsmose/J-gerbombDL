@@ -12,7 +12,7 @@ This contains the code that builds and analyse models to predict jägerbombglass
 | `factory`              | Factory modules for setting up training configurations  |
 | `freezer`              | for freezing models or layers                           |
 | `metrics`              | Metric calculation, tracking, and visualization         |
-| `models`               | Model configuration files (YAML)                        |
+| `models`               | Model configuration files                        |
 | `utils`                | Helper functions and utility scripts                    |
 ```
 

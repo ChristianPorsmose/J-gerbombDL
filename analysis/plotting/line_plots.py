@@ -8,16 +8,20 @@ from analysis.plotting.utils import (
 )
 from analysis.globals import Color, PhaseName
 
-def _plot_epoch(df : dict, val_total : float, label : str, color_idx : int, alpha : int = 0.8, linewidth : float = 2.5):
+def _plot_epoch(
+    ax, df: dict, val_total: float, label: str, color_idx: int,
+    alpha: float = 0.8, linewidth: float = 2.5
+):
     color_idx = color_idx % len(Color.colors)
-    plt.plot(
+    ax.plot(
         df["epoch"],
         val_total,
         label=label,
         linewidth=linewidth,
         color=Color.colors[color_idx],
-        alpha = alpha
+        alpha=alpha
     )
+
 
 def _add_styling_epoch(ax : Axes, ylabel : str,  title : str, color_idx : int = 0):
     color_idx = color_idx % len(Color.colors)
@@ -37,7 +41,7 @@ def plot_loss_convergence(experiments_data: List[Dict]):
         df = exp["results"]
         val_total = total_loss(df,"val")
         all_losses.extend(val_total)
-        _plot_epoch(df, val_total, exp["label"], idx)
+        _plot_epoch(ax,df, val_total, exp["label"], idx)
     
     set_percentile_ylim(ax, all_losses, floor=0)
     
@@ -61,8 +65,8 @@ def plot_train_val_comparison_per_experiment(experiments_data: List[Dict]):
         train_total = total_loss(df, "train")
         val_total = total_loss(df, "val")
 
-        _plot_epoch(df, train_total, "Train Loss", 0)
-        _plot_epoch(df, val_total, "Val Loss", 1)
+        _plot_epoch(ax, df, train_total, "Train Loss", 0)
+        _plot_epoch(ax, df, val_total, "Val Loss", 1)
 
         _add_styling_epoch(ax, "Total Loss", exp["label"], idx)
 
@@ -90,10 +94,10 @@ def plot_loss_components_per_experiment(experiments_data: List[Dict]):
     for idx, (ax, exp) in enumerate(zip(axes, experiments_data)):
         df = exp["results"]
 
-        _plot_epoch(df, df["val/box_loss"], "Box Loss", 1, linewidth=2)
-        _plot_epoch(df, df["val/cls_loss"], "Class Loss", 0, linewidth=2)
-        _plot_epoch(df, df["val/dfl_loss"], "DFL Loss", 2, linewidth=2)
-        _plot_epoch(df, df["val/spatial_loss"], "Spatial Loss", 3, linewidth=2)
+        _plot_epoch(ax,df, df["val/box_loss"], "Box Loss", 1, linewidth=2)
+        _plot_epoch(ax,df, df["val/cls_loss"], "Class Loss", 0, linewidth=2)
+        _plot_epoch(ax,df, df["val/dfl_loss"], "DFL Loss", 2, linewidth=2)
+        _plot_epoch(ax,df, df["val/spatial_loss"], "Spatial Loss", 3, linewidth=2)
 
         _add_styling_epoch(ax, "Validation Loss", exp["label"], idx)
 
@@ -128,7 +132,7 @@ def plot_train_val_gap(experiments_data: List[Dict]):
         gap_percent = ((train_total - val_total) / train_total * 100).abs()
         all_gaps.extend(gap_percent)
 
-        _plot_epoch(df, gap_percent, exp["label"], idx)
+        _plot_epoch(ax,df, gap_percent, exp["label"], idx)
 
     set_percentile_ylim(ax, all_gaps, floor=0)
 
