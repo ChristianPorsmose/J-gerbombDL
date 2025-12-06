@@ -7,16 +7,21 @@ from matplotlib.axes import Axes
 import numpy as np
 import pandas as pd
 
-from analysis.experiment_list import OUTPUT_DIR
+from analysis.globals import Output
 from utils.echo import log_success
 
 
 def save_plot(path : Path, dpi: int = 300):
     plt.tight_layout()
-    save_path = OUTPUT_DIR / path
+    save_path = Output.path / path
     plt.savefig(save_path, dpi=dpi, bbox_inches="tight")
     plt.close()
     log_success(f"Saved: {save_path}")
+
+def save_csv(df_matrix, path : str):
+    csv_path = Output.path / path
+    df_matrix.to_csv(csv_path, index=False, float_format="%.4f")
+    log_success(f"Saved: {csv_path}")
 
 def fmt_param(p: str) -> str:
     return p.replace("_", " ").title()

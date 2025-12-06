@@ -1,8 +1,8 @@
 from matplotlib import pyplot as plt
 import pandas as pd
-from analysis.experiment_list import OUTPUT_DIR, PHASE_NAME
-from analysis.plotting.utils import save_plot
-
+from analysis.plotting.utils import save_csv, save_plot
+from analysis.globals import Output, PhaseName
+from utils.echo import log_success
 
 def _style_row(table, col_labels, row_idx: int, facecolor: str, text_color: str = "black", bold: bool = True):
     for i in range(len(col_labels)):
@@ -39,10 +39,7 @@ def _get_display_cols():
 def save_decision_matrix(df_matrix: pd.DataFrame):
     """Save decision matrix to CSV and create visualization."""
 
-    # Save to CSV
-    csv_path = OUTPUT_DIR / "decision_matrix.csv"
-    df_matrix.to_csv(csv_path, index=False, float_format="%.4f")
-    print(f"✅ Saved: {csv_path}")
+    save_csv(df_matrix,"decision_matrix.csv")
 
     # Create visual table
     fig, ax = plt.subplots(figsize=(18, 6))
@@ -73,11 +70,12 @@ def save_decision_matrix(df_matrix: pd.DataFrame):
     _style_row(table, col_labels,1, "#2ecc71")
 
     plt.title(
-        f"Phase {PHASE_NAME} Decision Matrix (Sorted by Total Score)",
+        f"Phase {PhaseName.name} Decision Matrix (Sorted by Total Score)",
         fontsize=16,
         fontweight="bold",
         pad=20,
     )
 
     save_plot("6_decision_matrix.png")
+
 

@@ -6,7 +6,7 @@ from typing import Dict, List, Tuple
 import numpy as np
 import pandas as pd
 
-from analysis.experiment_list import EXPERIMENT_LABELS, EXPERIMENTS_DIR, OUTPUT_DIR, PHASE_NAME
+from analysis.globals import Output, PhaseName, Experiments
 
 
 def total_loss(df : dict, base_key : str):
@@ -19,7 +19,7 @@ def generate_summary_report(experiments_data: List[Dict], df_matrix: pd.DataFram
 
     report = []
     report.append("=" * 80)
-    report.append(f"PHASE {PHASE_NAME}: OPTIMIZER SELECTION - ANALYSIS REPORT")
+    report.append(f"PHASE {PhaseName.name}: OPTIMIZER SELECTION - ANALYSIS REPORT")
     report.append("=" * 80)
     report.append("")
 
@@ -118,7 +118,7 @@ def generate_summary_report(experiments_data: List[Dict], df_matrix: pd.DataFram
 
     # Save report
     report_text = "\n".join(report)
-    report_path = OUTPUT_DIR / "analysis_report.txt"
+    report_path = Output.path / "analysis_report.txt"
     with open(report_path, "w") as f:
         f.write(report_text)
 
@@ -250,7 +250,7 @@ def average_runs(experiment_name: str, runs: List[Path]) -> Dict:
     }
 
 
-def load_experiment_data(experiment_name: str, mode: str = "best") -> Dict:
+def load_experiment_data(experiment_name: str) -> Dict:
     """
     Load experiment data.
 
@@ -258,54 +258,19 @@ def load_experiment_data(experiment_name: str, mode: str = "best") -> Dict:
         experiment_name: Name of the experiment
         mode: "best" (best run by val loss), "average" (average all runs), or "latest" (most recent)
     """
-    runs = find_all_runs(experiment_name)
+    label = experiment_name.replace("_", " ").title()
+    run_dir = find_best_run(experiment_name)
+    run_data = load_single_run_data(run_dir)
 
-    # Get label, fallback to experiment name if not in predefined labels
-    label = EXPERIMENT_LABELS.get(
-        experiment_name, experiment_name.replace("_", " ").title()
-    )
-
-    if mode == "best":
-        run_dir = find_best_run(experiment_name)
-        run_data = load_single_run_data(run_dir)
-        return {
-            "name": experiment_name,
-            "label": label,
-            "results": run_data["results"],
-            "test_results": run_data["test_results"],
-            "run_dir": run_dir,
-            "mode": "best",
-            "num_runs": 1,
-        }
-
-    elif mode == "average":
-        avg_data = average_runs(experiment_name, runs)
-        return {
-            "name": experiment_name,
-            "label": label + f" (avg n={avg_data['num_runs']})",
-            "results": avg_data["results"],
-            "test_results": avg_data["test_results"],
-            "run_dir": None,
-            "mode": "average",
-            "num_runs": avg_data["num_runs"],
-        }
-
-    elif mode == "latest":
-        run_dir = runs[-1]
-        run_data = load_single_run_data(run_dir)
-        return {
-            "name": experiment_name,
-            "label": label,
-            "results": run_data["results"],
-            "test_results": run_data["test_results"],
-            "run_dir": run_dir,
-            "mode": "latest",
-            "num_runs": 1,
-        }
-
-    else:
-        raise ValueError(f"Invalid mode: {mode}. Use 'best', 'average', or 'latest'")
-
+    return {
+        "name": experiment_name,
+        "label": label,
+        "results": run_data["results"],
+        "test_results": run_data["test_results"],
+        "run_dir": run_dir,
+        "mode": "best",
+        "num_runs": 1,
+    }
 
 def calculate_convergence_epoch(
     results_df: pd.DataFrame, threshold: float = 0.95
@@ -353,17 +318,15 @@ def calculate_stability(results_df: pd.DataFrame, last_n: int = 20) -> float:
 
 def find_all_runs(experiment_name: str) -> List[Path]:
     """Find all run directories for an experiment."""
-    exp_dir = EXPERIMENTS_DIR / experiment_name / "runs"
+    exp_dir = Experiments.path / experiment_name / "runs"
     if not exp_dir.exists():
         raise FileNotFoundError(f"No runs found for {experiment_name}")
 
-    # Find all train_* directories
     runs = sorted(exp_dir.glob("train_*"))
     if not runs:
         raise FileNotFoundError(f"No training runs found in {exp_dir}")
 
     return runs
-
 
 def find_best_run(experiment_name: str) -> Path:
     """Find the best run (lowest final validation loss) for an experiment."""

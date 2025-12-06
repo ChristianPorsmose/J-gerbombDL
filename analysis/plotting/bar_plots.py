@@ -5,7 +5,8 @@ from matplotlib.axes import Axes
 import numpy as np
 import pandas as pd
 
-from analysis.experiment_list import COLORS, PHASE_NAME
+
+from analysis.globals import Color, PhaseName
 from analysis.plotting.utils import compute_metric, fmt_param, normalize_metrics, save_plot
 from analysis.utils import calculate_convergence_epoch
 
@@ -86,7 +87,7 @@ def plot_map_comparison_bar_plot(experiments_data, base, run):
     _, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
 
     labels = [exp["label"] for exp in experiments_data]
-    colors = [COLORS[exp["name"]] for exp in experiments_data]
+    colors = [Color.colors[idx % len(Color.colors)] for idx in range(len(experiments_data))]
 
     metrics = ["mAP50-95(B)", "mAP50(B)"]
 
@@ -136,38 +137,37 @@ def plot_val_test_gap_bar_plot(experiments_data):
 def plot_test_loss_comparison_bar_plot(experiments_data: List[Dict]):
     _, ax = plt.subplots(figsize=(14, 7))
 
-    labels = [exp["label"] for exp in experiments_data]
+    exp_labels = [exp["label"] for exp in experiments_data] 
+    N = len(exp_labels)
 
-    # Extract test loss values
-    test_box = []
-    test_cls = []
-    test_dfl = []
-    test_spatial = []
+    test_box = [exp["test_results"]["losses"]["box"] for exp in experiments_data]
+    test_cls = [exp["test_results"]["losses"]["cls"] for exp in experiments_data]
+    test_dfl = [exp["test_results"]["losses"]["dfl"] for exp in experiments_data]
+    test_spatial = [exp["test_results"]["losses"]["spatial"] for exp in experiments_data]
 
-    for exp in experiments_data:
-        test_box.append(exp["test_results"]["losses"]["box"])
-        test_cls.append(exp["test_results"]["losses"]["cls"])
-        test_dfl.append(exp["test_results"]["losses"]["dfl"])
-        test_spatial.append(exp["test_results"]["losses"]["spatial"])
+    data_series = [test_box, test_cls, test_dfl, test_spatial]
+    loss_labels = ["Box Loss", "Class Loss", "DFL Loss", "Spatial Loss"]
 
-    # Collect all loss values for 95th percentile calculation
-    all_losses = test_box + test_cls + test_dfl + test_spatial
-
-    x = np.arange(len(labels))
+    x = np.arange(N)
     width = 0.2
 
-    labels = ["Box Loss", "Class Loss", "DFL Loss", "Spatial Loss"]
-    data_series = [test_box, test_cls, test_dfl, test_spatial]
-    all_bar_containers = _add_bars(ax, x,width,data_series, labels)
+    all_bar_containers = _add_bars(ax, x, width, data_series, loss_labels)
 
-    # Set y-axis limits to 95th percentile to avoid outlier scaling
-    if len(all_losses) > 0:
+    all_losses = test_box + test_cls + test_dfl + test_spatial
+    if all_losses:
         HEADROOM = 1.15
         y_max = np.percentile(all_losses, 95)
         ax.set_ylim(top=y_max * HEADROOM)
 
-    _add_styling_bars(ax,"Loss Value",f"Phase {PHASE_NAME}: Test Loss Components Comparison", labels, x )
-    _add_bar_labels(ax, all_bar_containers,"{:.3f}", 0.005, 0.01)
+    _add_styling_bars(
+        ax,
+        ylabel="Loss Value",
+        title=f"Phase {PhaseName.name}: Test Loss Components Comparison",
+        labels=exp_labels,
+        x=x
+    )
+
+    _add_bar_labels(ax, all_bar_containers, "{:.3f}", 0.005, 0.01)
     save_plot("3c_test_loss_comparison.png")
 
 
@@ -179,14 +179,14 @@ def plot_convergence_speed_bar_plot(experiments_data: List[Dict]):
     convergence_epochs = [
         calculate_convergence_epoch(exp["results"]) for exp in experiments_data
     ]
-    colors_list = [COLORS[exp["name"]] for exp in experiments_data]
+    colors_list = [Color.colors[idx % len(Color.colors)] for idx in range(len(experiments_data))]
 
     bars = ax.barh(
         labels, convergence_epochs, color=colors_list, edgecolor="black", linewidth=1.5
     )
     ax.set_xlabel("Epochs to Reach 95% of Final mAP", fontsize=13, fontweight="bold")
     ax.set_title(
-        f"Phase {PHASE_NAME}: Convergence Speed Comparison",
+        f"Phase {PhaseName.name}: Convergence Speed Comparison",
         fontsize=15,
         fontweight="bold",
     )

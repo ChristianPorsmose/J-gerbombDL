@@ -6,7 +6,7 @@ from matplotlib.colors import Normalize
 import numpy as np
 import pandas as pd
 
-from analysis.experiment_list import OUTPUT_DIR, PHASE_NAME
+from analysis.globals import Output
 from analysis.plotting.bar_plots import create_parameter_importance_plot, create_top_n_comparison_bar_plot
 from analysis.plotting.heat_maps import create_heatmap_plots
 from analysis.plotting.sweep_plots import create_parameter_sweep_plot
@@ -69,7 +69,7 @@ def create_grid_search_plots(experiments_data: List[Dict]):
     if len(varying_params) >= 2:
         create_parameter_importance_plot(df_grid, varying_params)
 
-    csv_path = OUTPUT_DIR / "grid_search_results.csv"
+    csv_path = Output.path / "grid_search_results.csv"
     df_grid.to_csv(csv_path, index=False, float_format="%.6f")
     log_success(f"Saved: {csv_path}")
     log_success(f"Grid search visualizations complete!")
