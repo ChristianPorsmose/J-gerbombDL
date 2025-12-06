@@ -14,4 +14,4 @@ class PhaseName:
 
 
 class Experiments:
-    path : Path = Path("experiments_results")
+    path : Path = Path("experiments_results_temp")
