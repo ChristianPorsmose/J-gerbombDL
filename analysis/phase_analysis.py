@@ -28,7 +28,7 @@ def apply_filter(filter:str):
         return
     log_success(f"Found {len(experiments_to_analyze)} matching experiments:")
     for exp in sorted(experiments_to_analyze):
-        print(f"   • {exp}")
+        log(f"   • {exp}")
     log("")
 
     return experiments_to_analyze

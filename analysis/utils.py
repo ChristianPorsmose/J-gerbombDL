@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import re
 from analysis.globals import Experiments
+from utils.echo import log_warning
 
 
 def total_loss(df : dict, base_key : str):
@@ -76,7 +77,7 @@ def average_runs(experiment_name: str, runs: List[Path]) -> Dict:
             if run_data["test_results"]:
                 all_test_results.append(run_data["test_results"])
         except Exception as e:
-            print(f"    ⚠️  Skipping {run_dir.name}: {e}")
+            log_warning(f"Skipping {run_dir.name}: {e}")
             continue
 
     if len(all_results) == 0:

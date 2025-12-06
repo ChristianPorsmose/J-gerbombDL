@@ -9,6 +9,7 @@ import pandas as pd
 from analysis.globals import Color, PhaseName
 from analysis.plotting.utils import compute_metric, fmt_param, normalize_metrics, save_plot
 from analysis.utils import calculate_convergence_epoch
+from utils.echo import log
 
 def _add_bars(ax, x, width, data_series, series_labels):
     colors = plt.cm.tab10.colors
@@ -214,7 +215,7 @@ def create_top_n_comparison_bar_plot(df_grid: pd.DataFrame, n: int = 10):
     df_top = df_grid.nlargest(actual_n, "val_map50_95")
 
     if actual_n < n:
-        print(f"Top N comparison: Only {actual_n} valid experiments (requested {n})")
+        log(f"Top N comparison: Only {actual_n} valid experiments (requested {n})")
 
     labels = [name[:40] + "..." if len(name) > 40 else name for name in df_top["label"]]
     x = np.arange(actual_n)
