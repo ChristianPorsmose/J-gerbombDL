@@ -160,7 +160,6 @@ def normalize_map_values(df):
 
 
 def normalize_metrics(df: pd.DataFrame, metrics: List[str]) -> pd.DataFrame:
-    """Normalize metrics to 0-1, inverting for 'lower is better'."""
     df_norm = df.copy()
     for metric in metrics:
         vals = df_norm[metric].values.astype(float)
@@ -171,12 +170,10 @@ def normalize_metrics(df: pd.DataFrame, metrics: List[str]) -> pd.DataFrame:
     return df_norm
 
 def get_numeric_params(df: pd.DataFrame, params: List[str]) -> List[str]:
-    """Return subset of params that are numeric in df."""
     return [p for p in params if p in df.columns and df[p].dtype in [np.float64, np.int64]]
 
 
 def compute_metric(df: pd.DataFrame, params: List[str], func) -> dict:
-    """Compute metric (e.g., correlation or variance) for numeric params."""
     numeric_params = get_numeric_params(df, params)
     metrics = {}
     for p in numeric_params:
