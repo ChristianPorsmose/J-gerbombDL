@@ -51,3 +51,13 @@ python -m experiments.run_grid_search "arguments"
 
 ## Analysis
 
+```
+python -m analysis.phase_analysis "arguments"
+```
+
+### Arguments
+| Argument | Type | Default | Description |
+|----------|------|---------|-------------|
+| `--filter` | str| None | filter experiments by name given substring fiter in experiments_results |
+| `--grid` | flag | False | plot grid specific plots |
+| `-o` `--output` | path | analysis_dir | output folder |
