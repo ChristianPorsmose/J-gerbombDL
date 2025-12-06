@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from analysis.experiment_list import COLORS, PHASE_NAME
-from analysis.plotting.utils import normalize_metrics, save_plot
+from analysis.plotting.utils import compute_metric, fmt_param, normalize_metrics, save_plot
 from analysis.utils import calculate_convergence_epoch
 
 def _add_bars(ax, x, width, data_series, series_labels):
@@ -266,3 +266,36 @@ def create_top_n_comparison_bar_plot(df_grid: pd.DataFrame, n: int = 10):
     )
     ax2.legend(labels, fontsize=7, loc="upper left", bbox_to_anchor=(1, 1))
     save_plot(f"top_{actual_n}_comparison.png")
+
+
+def plot_horizontal_bars(ax, data_dict: dict, xlabel: str, title: str, color: str, fmt="{:.3f}"):
+    """Plot horizontal bar chart with values annotated."""
+    if not data_dict:
+        return
+    sorted_items = sorted(data_dict.items(), key=lambda x: x[1], reverse=True)
+    param_names = [fmt_param(p) for p, _ in sorted_items]
+    values = [v for _, v in sorted_items]
+
+    bars = ax.barh(param_names, values, color=color, edgecolor="black")
+    ax.set_xlabel(xlabel, fontsize=11, fontweight="bold")
+    ax.set_title(title, fontsize=12, fontweight="bold")
+    ax.grid(True, alpha=0.3, axis="x")
+
+    for i, (bar, val) in enumerate(zip(bars, values)):
+        ax.text(val + 1e-8, i, fmt.format(val), va="center", ha="left", fontsize=10, fontweight="bold")
+
+
+def create_parameter_importance_plot(df_grid: pd.DataFrame, varying_params: List[str]):
+    """Analyze and plot parameter importance using correlation and variance."""
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+
+    corr_func = lambda df, p: abs(df[[p, "val_map50_95"]].corr().iloc[0, 1])
+    correlations = compute_metric(df_grid, varying_params, corr_func)
+    plot_horizontal_bars(ax1, correlations, "Absolute Correlation with Val mAP", "Hyperparameter Importance", "#3498db")
+
+    df_clean = df_grid.replace([np.inf, -np.inf], np.nan).dropna(subset=["val_map50_95"])
+    variance_func = lambda df, p: (df.groupby(p)["val_map50_95"].max() - df.groupby(p)["val_map50_95"].min()).mean()
+    variance_explained = compute_metric(df_clean, varying_params, variance_func)
+    plot_horizontal_bars(ax2, variance_explained, "mAP Range Induced", "Parameter Impact on Performance", "#e74c3c", fmt="{:.4f}")
+
+    save_plot("parameter_importance.png")

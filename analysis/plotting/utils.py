@@ -18,6 +18,9 @@ def save_plot(path : Path, dpi: int = 300):
     plt.close()
     log_success(f"Saved: {save_path}")
 
+def fmt_param(p: str) -> str:
+    return p.replace("_", " ").title()
+
 def set_percentile_ylim(ax, values, pmin=5, pmax=95, floor=0, scale=1.1):
     clean = [v for v in values if np.isfinite(v)]
     if not clean:
@@ -161,3 +164,21 @@ def normalize_metrics(df: pd.DataFrame, metrics: List[str]) -> pd.DataFrame:
         else:  # lower is better
             df_norm[metric + "_norm"] = 1 - (vals - vals.min()) / (vals.max() - vals.min() + 1e-8)
     return df_norm
+
+def get_numeric_params(df: pd.DataFrame, params: List[str]) -> List[str]:
+    """Return subset of params that are numeric in df."""
+    return [p for p in params if p in df.columns and df[p].dtype in [np.float64, np.int64]]
+
+
+def compute_metric(df: pd.DataFrame, params: List[str], func) -> dict:
+    """Compute metric (e.g., correlation or variance) for numeric params."""
+    numeric_params = get_numeric_params(df, params)
+    metrics = {}
+    for p in numeric_params:
+        try:
+            val = func(df, p)
+            if not np.isnan(val):
+                metrics[p] = val
+        except Exception:
+            continue
+    return metrics

@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import Optional
 import click
 import matplotlib.cm as cm
+from analysis.decision_matrix.decision_matrix import save_decision_matrix
+from analysis.decision_matrix.generate import generate_decision_matrix
 from analysis.experiment_list import COLORS, EXPERIMENT_LABELS, EXPERIMENTS_DIR
 from analysis.plotting.line_plots import plot_loss_components_per_experiment, plot_loss_convergence, plot_train_val_comparison_per_experiment, plot_train_val_gap
 from analysis.plotting.bar_plots import plot_map_comparison_bar_plot, plot_test_loss_comparison_bar_plot, plot_val_test_gap_bar_plot
@@ -96,7 +98,8 @@ def main(mode: str, filter: Optional[str], grid_search: Optional[str], top: Opti
     #plot_loss_components_per_experiment(experiments_data)
     #plot_train_val_gap(experiments_data)
     create_grid_search_plots(experiments_data)
-
+    df_matrix = generate_decision_matrix(experiments_data)
+    save_decision_matrix(df_matrix)
 
 
 
