@@ -5,8 +5,8 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
-
-from analysis.globals import Output, PhaseName, Experiments
+import re
+from analysis.globals import Experiments
 
 
 def total_loss(df : dict, base_key : str):
@@ -14,149 +14,29 @@ def total_loss(df : dict, base_key : str):
         + df.get("{base_key}/dfl_loss", 0) + df.get("{base_key}/spatial_loss", 0)
 
 
-def generate_summary_report(experiments_data: List[Dict], df_matrix: pd.DataFrame):
-    """Generate text summary report."""
-
-    report = []
-    report.append("=" * 80)
-    report.append(f"PHASE {PhaseName.name}: OPTIMIZER SELECTION - ANALYSIS REPORT")
-    report.append("=" * 80)
-    report.append("")
-
-    # Best performer
-    best = df_matrix.iloc[0]
-    report.append(f"🏆 RECOMMENDED CONFIGURATION: {best['Experiment']}")
-    report.append("")
-    report.append("JUSTIFICATION:")
-    report.append(
-        f"  • Validation mAP@0.5:0.95: {best['Val_mAP@0.5:0.95']:.4f} (Rank #{int(best['Rank_mAP50-95'])})"
-    )
-    report.append(
-        f"  • Test mAP@0.5: {best['Test_mAP@0.5']:.4f} (Rank #{int(best['Rank_Test_mAP'])})"
-    )
-    report.append(
-        f"  • Train-Val Gap: {best['Train-Val_Gap_%']:.2f}% (Rank #{int(best['Rank_Train-Val_Gap'])})"
-    )
-    report.append(
-        f"  • Val-Test Gap: {best['Val-Test_Gap_%']:.2f}% (Rank #{int(best['Rank_Val-Test_Gap'])})"
-    )
-    report.append(
-        f"  • Convergence: Epoch {int(best['Convergence_Epoch'])} (Rank #{int(best['Rank_Convergence'])})"
-    )
-    report.append(
-        f"  • Stability: {best['Stability_Std']:.4f} std (Rank #{int(best['Rank_Stability'])})"
-    )
-    report.append(f"  • Total Score: {best['Total_Score']:.2f} (Lower is better)")
-    report.append("")
-
-    # Full rankings
-    report.append("=" * 80)
-    report.append("COMPLETE RANKINGS")
-    report.append("=" * 80)
-    report.append("")
-
-    for idx, row in df_matrix.iterrows():
-        rank = df_matrix.index.get_loc(idx) + 1
-        medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(rank, f"#{rank}")
-
-        report.append(f"{medal} {row['Experiment']}")
-        report.append(f"   Val mAP@0.5:0.95: {row['Val_mAP@0.5:0.95']:.4f}")
-        report.append(f"   Test mAP@0.5: {row['Test_mAP@0.5']:.4f}")
-        report.append(f"   Train-Val Gap: {row['Train-Val_Gap_%']:.2f}%")
-        report.append(f"   Convergence: Epoch {int(row['Convergence_Epoch'])}")
-        report.append(f"   Total Score: {row['Total_Score']:.2f}")
-        report.append("")
-
-    # Key insights
-    report.append("=" * 80)
-    report.append("KEY INSIGHTS")
-    report.append("=" * 80)
-    report.append("")
-
-    # Check for overfitting
-    high_gap = df_matrix[df_matrix["Train-Val_Gap_%"] > 15]
-    if len(high_gap) > 0:
-        report.append(
-            f"⚠️  {len(high_gap)} experiment(s) show high train-val gap (>15%):"
-        )
-        for _, row in high_gap.iterrows():
-            report.append(f"   • {row['Experiment']}: {row['Train-Val_Gap_%']:.2f}%")
-        report.append("")
-    else:
-        report.append("✅ All experiments show acceptable train-val gap (<15%)")
-        report.append("")
-
-    # Check convergence
-    avg_convergence = df_matrix["Convergence_Epoch"].mean()
-    report.append(f"📊 Average convergence: Epoch {avg_convergence:.1f}")
-    fastest = df_matrix.loc[df_matrix["Convergence_Epoch"].idxmin()]
-    report.append(
-        f"⚡ Fastest convergence: {fastest['Experiment']} (Epoch {int(fastest['Convergence_Epoch'])})"
-    )
-    report.append("")
-
-    # Check generalization
-    avg_gap = df_matrix["Val-Test_Gap_%"].mean()
-    report.append(f"🎯 Average val-test gap: {avg_gap:.2f}%")
-    best_gen = df_matrix.loc[df_matrix["Val-Test_Gap_%"].idxmin()]
-    report.append(
-        f"🏅 Best generalization: {best_gen['Experiment']} ({best_gen['Val-Test_Gap_%']:.2f}% gap)"
-    )
-    report.append("")
-
-    report.append("=" * 80)
-    report.append("RECOMMENDATION FOR SUBSEQUENT PHASES")
-    report.append("=" * 80)
-    report.append("")
-    report.append(f"Use '{best['Experiment']}' configuration for:")
-    report.append("  • Phase 1B: Transfer Learning Strategy")
-    report.append("  • Phase 2: Augmentation Validation")
-    report.append("  • Phase 3: Data Efficiency")
-    report.append("  • Phase 4: Spatial Consistency Loss")
-    report.append("")
-    report.append("=" * 80)
-
-    # Save report
-    report_text = "\n".join(report)
-    report_path = Output.path / "analysis_report.txt"
-    with open(report_path, "w") as f:
-        f.write(report_text)
-
-    print("\n" + report_text)
-    print(f"\n✅ Saved: {report_path}")
-
+# TODO : den her burde bare tage hyperparameters fra config
 def extract_hyperparameters_from_name(exp_name: str) -> Dict:
     """Extract hyperparameter values from experiment name."""
     params = {}
 
-    # Common patterns
-    import re
-
-    # Learning rate: lr0_0001 -> 0.0001
     lr_match = re.search(r"lr(0_\d+)", exp_name)
     if lr_match:
         params["lr"] = float(lr_match.group(1).replace("_", "."))
 
-    # Momentum: momentum0_9000 -> 0.9000
     momentum_match = re.search(r"momentum(0_\d+)", exp_name)
     if momentum_match:
         params["momentum"] = float(momentum_match.group(1).replace("_", "."))
 
-    # Weight decay: weight_decay0_0010 -> 0.0010
     wd_match = re.search(r"weight_decay(0_\d+)", exp_name)
     if wd_match:
         params["weight_decay"] = float(wd_match.group(1).replace("_", "."))
 
-    # Batch size
     bs_match = re.search(r"batch_?size_?(\d+)", exp_name, re.IGNORECASE)
     if bs_match:
         params["batch_size"] = int(bs_match.group(1))
 
-    # Optimizer type
     if "adamw" in exp_name.lower():
         params["optimizer"] = "AdamW"
-    elif "adam" in exp_name.lower():
-        params["optimizer"] = "Adam"
     elif "sgd" in exp_name.lower():
         params["optimizer"] = "SGD"
 
@@ -167,7 +47,6 @@ def extract_hyperparameters_from_name(exp_name: str) -> Dict:
     #   "jagerloss_no_prop_config_small_lamda_rate160"
     #   "jagerloss_no_prop_config_pretrained_lamda_rate80"
     if "jagerloss_no_prop_config" in exp_name:
-        # Model variant flag (numeric for plotting)
         if "small" in exp_name:
             params["pretrained_flag"] = 0
             params["model_variant"] = "small"
@@ -175,7 +54,6 @@ def extract_hyperparameters_from_name(exp_name: str) -> Dict:
             params["pretrained_flag"] = 1
             params["model_variant"] = "pretrained"
 
-        # Lambda rate (numeric)
         lam_match = re.search(r"lamda[_-]?rate(\d+)", exp_name, re.IGNORECASE)
         if lam_match:
             try:
