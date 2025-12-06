@@ -23,7 +23,7 @@ This contains the code that builds and analyse models to predict jägerbombglass
 pip install -r requirements.txt
 ```
 
-## Running the Code
+## Running main training
 
 ```
 python main.py --config <config_file>.yaml
@@ -34,7 +34,7 @@ python main.py --config <config_file>.yaml
 |----------|------|---------|-------------|
 | `--config` | yaml | `main.yaml` | Model training configuration ( see template.yaml) |
 
-## Running Experiments
+## Experiments
 
 ```
 python -m experiments.run_grid_search "arguments"
