@@ -14,7 +14,7 @@ nc: 2  # We only need one class
 # [layer, repeats, module, args]
 backbone:
   # Initial Downsampling
-  - [-1, 1, Conv, [12, 3, 2]]  # 0-P1/2 (C1=16)
+  - [-1, 1, Conv, [16, 3, 2]]  # 0-P1/2 (C1=16)
   - [-1, 1, Conv, [24, 3, 2]]  # 1-P2/4 (C2=32)
   - [-1, 1, C3k2, [24, True]]   # C3k2 block with 1 repeat
 
