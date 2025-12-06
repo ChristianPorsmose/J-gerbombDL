@@ -20,13 +20,14 @@ from analysis.decision_matrix.decision_matrix import save_decision_matrix
 from analysis.decision_matrix.generate import generate_decision_matrix
 from analysis.experiment_list import COLORS, EXPERIMENT_LABELS, EXPERIMENTS_DIR
 from analysis.plotting.line_plots import plot_loss_components_per_experiment, plot_loss_convergence, plot_train_val_comparison_per_experiment, plot_train_val_gap
-from analysis.plotting.bar_plots import plot_map_comparison_bar_plot, plot_test_loss_comparison_bar_plot, plot_val_test_gap_bar_plot
+from analysis.plotting.bar_plots import plot_convergence_speed_bar_plot, plot_map_comparison_bar_plot, plot_test_loss_comparison_bar_plot, plot_val_test_gap_bar_plot
 from analysis.utils import load_experiment_data
 from analysis.grid_search import create_grid_search_plots
+from utils.echo import log_error, log_info, log_success, log
 
 
 def apply_filter(filter:str):
-    print(f"🔍 Filtering experiments with pattern: '{filter}'")
+    log_info(f"Filtering experiments with pattern: '{filter}'")
     # Search in experiments directory for matching folders
     available_experiments = [
         d.name for d in EXPERIMENTS_DIR.iterdir() if d.is_dir()
@@ -35,15 +36,15 @@ def apply_filter(filter:str):
         exp for exp in available_experiments if filter in exp
     ]
     if not experiments_to_analyze:
-        print(f"❌ No experiments found matching filter '{filter}'")
-        print(
+        log_error(f"No experiments found matching filter '{filter}'")
+        log(
             f"Available experiments: {', '.join(sorted(available_experiments)[:10])}..."
         )
         return
-    print(f"✅ Found {len(experiments_to_analyze)} matching experiments:")
+    log_success(f"Found {len(experiments_to_analyze)} matching experiments:")
     for exp in sorted(experiments_to_analyze):
         print(f"   • {exp}")
-    print()
+    log("")
     # Create dynamic labels and colors for filtered experiments
     EXPERIMENT_LABELS.clear()
     COLORS.clear()
@@ -68,19 +69,7 @@ def apply_filter(filter:str):
     default=None,
     help="Filter experiments by substring match (e.g., 'adamW_lr0_001' to match all experiments with that pattern)",
 )
-@click.option(
-    "--grid-search",
-    type=str,
-    default=None,
-    help="Create grid search visualization plots. Specify name for output directory (e.g., 'adamw_lr_search')",
-)
-@click.option(
-    "--top",
-    type=int,
-    default=None,
-    help="Only analyze top N experiments by validation mAP (e.g., --top 10)",
-)
-def main(mode: str, filter: Optional[str], grid_search: Optional[str], top: Optional[int]):
+def main(mode: str, filter: Optional[str]):
     experiments_to_analyze = apply_filter(filter)
     
     experiments_data = []
@@ -88,19 +77,18 @@ def main(mode: str, filter: Optional[str], grid_search: Optional[str], top: Opti
         exp_data = load_experiment_data(exp_name, mode=mode)
         experiments_data.append(exp_data)
 
-    #plot_map_comparison_bar_plot(experiments_data,"results", "3 Final Validation")
-    #plot_map_comparison_bar_plot(experiments_data,"test_results", "4 Test")
-    #plot_val_test_gap_bar_plot(experiments_data)
-    #plot_test_loss_comparison_bar_plot(experiments_data)
-    #plot_convergence_speed_bar_plot(experiments_data)
-    #plot_loss_convergence(experiments_data)
-    #plot_train_val_comparison_per_experiment(experiments_data)
-    #plot_loss_components_per_experiment(experiments_data)
-    #plot_train_val_gap(experiments_data)
+    plot_map_comparison_bar_plot(experiments_data,"results", "3 Final Validation")
+    plot_map_comparison_bar_plot(experiments_data,"test_results", "4 Test")
+    plot_val_test_gap_bar_plot(experiments_data)
+    plot_test_loss_comparison_bar_plot(experiments_data)
+    plot_convergence_speed_bar_plot(experiments_data)
+    plot_loss_convergence(experiments_data)
+    plot_train_val_comparison_per_experiment(experiments_data)
+    plot_loss_components_per_experiment(experiments_data)
+    plot_train_val_gap(experiments_data)
     create_grid_search_plots(experiments_data)
     df_matrix = generate_decision_matrix(experiments_data)
     save_decision_matrix(df_matrix)
-
 
 
 if __name__ == "__main__":
