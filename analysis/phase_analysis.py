@@ -22,7 +22,7 @@ from analysis.experiment_list import COLORS, EXPERIMENT_LABELS, EXPERIMENTS_DIR
 from analysis.plotting.line_plots import plot_loss_components_per_experiment, plot_loss_convergence, plot_train_val_comparison_per_experiment, plot_train_val_gap
 from analysis.plotting.bar_plots import plot_map_comparison_bar_plot, plot_test_loss_comparison_bar_plot, plot_val_test_gap_bar_plot
 from analysis.utils import load_experiment_data
-from analysis.plot_new import create_grid_search_plots
+from analysis.grid_search import create_grid_search_plots
 
 
 def apply_filter(filter:str):
