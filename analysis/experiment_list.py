@@ -2,7 +2,7 @@ from pathlib import Path
 
 from analysis.colors_and_labels import COLORS_1B, EXPERIMENT_1B_LABELS
 
-EXPERIMENTS_DIR = Path("experiments_results_temp")
+EXPERIMENTS_DIR = Path("experiments_results")
 
 PHASE1A_EXPERIMENTS = [
     "phase1a_sgd_standard",

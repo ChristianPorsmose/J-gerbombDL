@@ -1,5 +1,5 @@
 # Jägerbomb glass detector
-This contains the code that builds and analyse models to predict jägerbombglass
+This contains the code that builds and analyse models to predict jägerbombglass. "./experiments" contains experiments mentioned in the report. "./experiments_old" contains older experiments that were not included or mentioned in the report, due to change of direction during the project.
 
 ## folder structure
 ```
