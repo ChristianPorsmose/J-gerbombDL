@@ -2,7 +2,7 @@
 This contains the code that builds and analyse models to predict jägerbombglass. "./experiments" contains experiments mentioned in the report. "./experiments_old" contains older experiments that were not included or mentioned in the report, due to change of direction during the project.
 
 ## folder structure
-```
+
 | Folder                 | Description                                             |
 |------------------------|---------------------------------------------------------|
 | `analysis`             | Scripts for analyzing results and generating plots      |
@@ -12,9 +12,8 @@ This contains the code that builds and analyse models to predict jägerbombglass
 | `factory`              | Factory modules for setting up training configurations  |
 | `freezer`              | for freezing models or layers                           |
 | `metrics`              | Metric calculation, tracking, and visualization         |
-| `models`               | Model configuration files                        |
+| `models`               | Model configuration files                               |
 | `utils`                | Helper functions and utility scripts                    |
-```
 
 
 ### Installation
