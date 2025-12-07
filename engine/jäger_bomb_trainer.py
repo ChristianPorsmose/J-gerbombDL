@@ -218,6 +218,10 @@ class JägerBombTrainer:
                 log_info(f"Early stopping at epoch {epoch}")
                 break
 
+            log_info(
+                f"best_loss={best_loss:.4f}, early_stop_counter={early_stop_counter}"
+            )
+
         training_end_time = time.time()
 
         self._save_training_time(training_start_time, training_end_time)
@@ -315,9 +319,6 @@ class JägerBombTrainer:
 
             if batch_idx % self.cfg.log_interval == 0:
                 log_loss(epoch, new_loss, header=f"TRAIN — Batch {batch_idx} ")
-                log_info(
-                    f"best_loss={best_loss:.4f}, early_stop_counter={early_stop_counter}"
-                )
 
         return batch_count
 
