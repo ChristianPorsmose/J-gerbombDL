@@ -1,15 +1,7 @@
-# Custom P3-Only YOLO Segmentation Configuration for Fixed Camera (Cups)
-
-# 1. Basic Settings
-# Path to the directory containing the dataset
+# Custom model
   
 # Number of classes
 nc: 2  # We only need one class
-
-# 2. Model Architecture (Micro Scale)
-
-# Design Goal: Use minimal depth (1 repeat for C3k2) and low channel counts.
-# The network terminates at P3 features (8x downsample).
 
 # [layer, repeats, module, args]
 backbone:
@@ -22,14 +14,11 @@ backbone:
   - [-1, 1, Conv, [48, 3, 2]]  # 3-P3/8 (C3=64). This is the highest resolution feature used.
   - [-1, 1, C3k2, [48, True]]   # C3k2 block with 1 repeat. (The network depth ends here)
 
-  # Optional: A single SPPF for better aggregation of the P3 features
   - [-1, 1, SPPF, [24, 5]]     # 5
 
-# Neck (Trivial: No need for multi-scale fusion, as we only use P3)
 
 
 # Head (Detection and Segmentation)
-# The head only connects to the last layer of the backbone (index 5)
 head:
   # Using detection head 
   - [[5], 1, Detect, [nc]] # Detect: [nc]
